@@ -1312,6 +1312,33 @@
       <p class="center" style="color:var(--muted)">You ${me} — ${bot} ${opp.av || ''} ${esc(opp.name)}</p>
       <div class="mt"><button class="btn" data-action="quiz-quit">Back to Arena</button></div></div></div>`;
   }
+  async function sbPatchMatch(id, fields) {
+    if (!sbUid() || !id) return;
+    return fetch(SB_URL + '/rest/v1/matches?id=eq.' + encodeURIComponent(id), { method: 'PATCH',
+      headers: sbH(CLOUD.session.access_token), body: JSON.stringify(fields) }).catch(() => {});
+  }
+  // live race: wait screen that polls until both scores exist, then shows the result
+  function pollResult(mid, mine, opp) {
+    const L = $('#lesson'); L.classList.remove('hidden');
+    L.innerHTML = `<div class="lesson"><div class="complete"><div class="big">⏳</div>
+      <h1>Waiting for ${esc(opp.name)}…</h1>
+      <p class="center" style="color:var(--muted)">You scored <b>${mine}/5</b>. The result appears the moment they finish.</p>
+      <div class="mt"><button class="btn ghost" data-action="quiz-quit">Check later</button></div></div></div>`;
+    let n = 0;
+    const iv = setInterval(async () => {
+      if (++n > 40 || L.classList.contains('hidden')) { clearInterval(iv); return; }
+      try {
+        const r = await fetch(SB_URL + '/rest/v1/matches?id=eq.' + mid + '&select=host_score,guest_score', { headers: sbH(CLOUD.session.access_token) });
+        const m = (await r.json())[0];
+        if (m && m.host_score != null && m.guest_score != null) {
+          clearInterval(iv);
+          const theirs = opp.iAmGuest ? m.host_score : m.guest_score;
+          if (mine > theirs) { S.gems += 10; S.xp += 12; S.xpWeek += 12; persist(); renderTop(); }
+          showMatchResult(mine > theirs, mine, theirs, opp);
+        }
+      } catch {}
+    }, 2500);
+  }
   let INBOX = [];
   function loadInbox() {
     if (!sbUid()) return;
@@ -1324,22 +1351,25 @@
         try { (await fetch(SB_URL + '/rest/v1/profiles?select=id,name&id=in.(' + ids.join(',') + ')',
           { headers: sbH(CLOUD.session.access_token) }).then(r => r.json())).forEach(p => { names[p.id] = p.name; }); } catch {}
         d.innerHTML = '<div class="seg-label">📬 Challenges for you</div>' + ms.map(m =>
-          `<div class="frow"><div class="fav">🎯</div><div class="fnm">${esc(names[m.host] || 'A friend')} scored ${m.host_score}/5 — beat it!</div>
+          `<div class="frow"><div class="fav">${m.host_score == null ? '🔴' : '🎯'}</div><div class="fnm">${m.host_score == null
+            ? esc(names[m.host] || 'A friend') + ' — LIVE race, join now!'
+            : esc(names[m.host] || 'A friend') + ' scored ' + m.host_score + '/5 — beat it!'}</div>
            <button class="btn sm" data-action="play-inbox" data-id="${m.id}">Play</button></div>`).join('');
       }).catch(() => {});
   }
   function challengeFriend(id) {
     ensureFriends();
     const f = S.friends.find(x => x.id === id); if (!f) return;
-    if ((f.id || '').length > 20 && sbUid()) {          // real friend → device-to-device
+    if ((f.id || '').length > 20 && sbUid()) {          // real friend → live race
       const picks = sample(battlePool(), 5);
-      quizRace({ name: f.name, av: f.av, fixedScore: 0 }, async (won, me) => {
-        await sbCreateMatch(picks.map(p => p.id), me, f.id);
-        const L = $('#lesson'); L.classList.remove('hidden');
-        L.innerHTML = `<div class="lesson"><div class="complete"><div class="big">📬</div><h1>Challenge sent!</h1>
-          <p class="center" style="color:var(--muted)">You scored <b>${me}/5</b>. ${esc(f.name)} will find it in Arena → Friends on their device — same words, higher score wins.</p>
-          <div class="mt"><button class="btn" data-action="quiz-quit">Done</button></div></div></div>`;
-      }, picks);
+      (async () => {
+        const mid = await sbCreateMatch(picks.map(p => p.id), null, f.id);   // created BEFORE playing
+        toast('🔴 Live! Tell ' + f.name + ' to open Arena → Friends NOW');
+        quizRace({ name: f.name, av: f.av, fixedScore: 0 }, async (won, me) => {
+          if (mid) { await sbPatchMatch(mid, { host_score: me }); pollResult(mid, me, { name: f.name, av: f.av, iAmGuest: false }); }
+          else showMatchResult(true, me, 0, f);
+        }, picks);
+      })();
       return;
     }
     if ((f.id || '').length <= 20) toast('🤖 Bot match — ' + f.name + ' has no 🟢 link. Re-exchange fresh codes to play for real.');
@@ -1583,8 +1613,9 @@
         if (COURSES[m.course]) { S.courseId = m.course; applyTheme(); renderTop(); }
         const terms = allTerms(m.course).filter(t => (m.term_ids || []).includes(t.id));
         if (terms.length < 2) { toast('Could not load that match'); break; }
-        quizRace({ name: 'their score', av: '🎯', fixedScore: m.host_score || 0 }, (won, me, bot) => {
-          sbAnswerMatch(m.id, me);
+        quizRace({ name: 'your friend', av: '🎯', fixedScore: m.host_score || 0 }, async (won, me, bot) => {
+          await sbAnswerMatch(m.id, me);
+          if (m.host_score == null) { pollResult(m.id, me, { name: 'your friend', av: '🎯', iAmGuest: true }); return; }
           if (won) { S.gems += 10; S.xp += 12; S.xpWeek += 12; persist(); renderTop(); }
           showMatchResult(won, me, bot, { name: 'your friend', av: '🎯' });
         }, terms); break; }
