@@ -1295,7 +1295,8 @@
     fetch(SB_URL + '/rest/v1/matches?select=id,host,term_ids,host_score,course&guest=eq.' + sbUid() + '&guest_score=is.null&order=created_at.desc&limit=5',
       { headers: sbH(CLOUD.session.access_token) })
       .then(r => r.ok ? r.json() : []).then(async ms => {
-        INBOX = ms; const d = $('#fr-inbox'); if (!d || !ms.length) return;
+        INBOX = ms; const d = $('#fr-inbox'); if (!d) return;
+        if (!ms.length) { d.innerHTML = '<div class="seg-label">📬 Challenges for you</div><p class="note" style="margin:4px 0 10px">None yet — when a 🟢 friend taps ⚔️ on you from THEIR device, it lands here.</p>'; return; }
         const ids = [...new Set(ms.map(m => m.host))]; const names = {};
         try { (await fetch(SB_URL + '/rest/v1/profiles?select=id,name&id=in.(' + ids.join(',') + ')',
           { headers: sbH(CLOUD.session.access_token) }).then(r => r.json())).forEach(p => { names[p.id] = p.name; }); } catch {}
@@ -1318,6 +1319,7 @@
       }, picks);
       return;
     }
+    if ((f.id || '').length <= 20) toast('🤖 Bot match — ' + f.name + ' has no 🟢 link. Re-exchange fresh codes to play for real.');
     quizRace({ name: f.name, av: f.av, skill: f.skill || 0.45 }, (won, me, bot) => {
       if (won) { S.gems += 8; S.xp += 10; S.xpWeek += 10; }
       f.xp = (f.xp || 0) + rand(2, 8); persist(); renderTop();

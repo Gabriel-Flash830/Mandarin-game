@@ -263,7 +263,7 @@ button { font-family: inherit; cursor: pointer; }
 .cstage { overflow: hidden; height: 190px; position: relative; }
 .crow { display:inline-block; width:92px; }
 .crow.emoji { width:auto; font-size:58px; line-height:1; display:inline-block; transform-origin:bottom center; }
-.crow.lottie { width:104px; height:104px; }
+.crow.lottie { width:136px; height:136px; }
 .crow.lottie .lbox { width:100%; height:100%; }
 .crowimg { width:100%; height:auto; display:block; transform-origin:bottom center; }
 .pal { font-size:60px; display:inline-block; transform-origin:bottom center; line-height:1; }
