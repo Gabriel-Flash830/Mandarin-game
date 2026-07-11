@@ -1113,6 +1113,7 @@
   function renderFriends(root) {
     ensureFriends();
     const name = S.displayName || 'You';
+    if (!S.displayName) setTimeout(() => toast('👤 Set your name (Edit name) so friends can tell it’s you!'), 600);
     const myCode = enc({ ww: 'friend', n: name, id: sbUid() || S.myId });
     const wrap = el('div', 'pad');
     const rows = [{ name, av: '😀', xp: S.xpWeek, me: true }, ...S.friends].sort((a, b) => b.xp - a.xp);
@@ -1157,6 +1158,11 @@
         }).catch(() => {});
     }
     loadInbox();
+    clearInterval(window.__inboxIv);
+    window.__inboxIv = setInterval(() => {
+      if (arenaTab === 'friends' && document.querySelector('#fr-inbox')) loadInbox();
+      else clearInterval(window.__inboxIv);
+    }, 5000);
     if (sbUid()) sbLeaderboard().then(rows => { const d = $('#cloud-lb'); if (d) d.innerHTML = rows.length
       ? rows.map((r, i) => `${i + 1}. <b>${esc(r.name)}</b> — ${r.xp_week} XP`).join('<br>')
       : 'No players yet — you will appear after your next lesson.'; });
@@ -1624,7 +1630,7 @@
       case 'join-go': { const t = $('#joinCode'); const raw = (t && t.value || '').trim(); $('#modal').setAttribute('hidden', ''); if (raw) playJoinedCode(raw); break; }
       case 'edit-name': { const n = prompt('Your display name:', S.displayName || ''); if (n != null) { S.displayName = n.trim().slice(0, 18); persist(); renderArena(); renderTop(); sbSync(); } break; }
       case 'copy-mycode': { const ta = $('#myCode'); if (ta) { ta.select(); try { navigator.clipboard.writeText(ta.value); } catch {} document.execCommand && document.execCommand('copy'); toast('Friend code copied'); } break; }
-      case 'add-by-code': { const raw = prompt('Paste your friend’s code:'); if (!raw) break; let d; try { d = dec(raw); } catch { toast('Invalid code'); break; } if (!d || d.ww !== 'friend') { toast('Invalid friend code'); break; } if ((S.friends || []).some(f => f.id === d.id)) { toast('Already friends'); break; } ensureFriends();
+      case 'add-by-code': { const raw = prompt('Paste your friend’s code:'); if (!raw) break; let d; try { d = dec(raw); } catch { toast('Invalid code'); break; } if (!d || d.ww !== 'friend') { toast('Invalid friend code'); break; } if (d.id === (sbUid() || S.myId)) { toast("That's your OWN code 😄 — send it to your friend, paste THEIRS here"); break; } if ((S.friends || []).some(f => f.id === d.id)) { toast('Already friends'); break; } ensureFriends();
         const isCloud = (d.id || '').length > 20;
         S.friends.push({ id: d.id || 'f' + Date.now(), name: (d.n || 'Friend').slice(0, 18), av: sample(BOT_AV, 1)[0], xp: 0, skill: 0.45, live: isCloud });
         if (isCloud && sbUid()) fetch(SB_URL + '/rest/v1/friends', { method: 'POST', headers: sbH(CLOUD.session.access_token), body: JSON.stringify({ a: sbUid(), b: d.id }) }).catch(() => {});
