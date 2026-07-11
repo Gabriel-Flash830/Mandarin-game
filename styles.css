@@ -556,3 +556,15 @@ button { font-family: inherit; cursor: pointer; }
 @keyframes thSparkle { from { opacity: .25; } to { opacity: 1; } }
 .th-bulb { position: absolute; top: 8%; left: 50%; margin-left: 44px; font-size: 26px; opacity: 0; animation: bulbPop 2.6s ease-in-out infinite; }
 @keyframes bulbPop { 0%,55% { opacity: 0; transform: scale(.5) rotate(-8deg); } 68%,88% { opacity: 1; transform: scale(1.1) rotate(6deg); } 100% { opacity: 0; } }
+
+/* frozen crow: shiver + snow + breath */
+.frw { width: min(240px, 88%); margin: 0 auto; }
+.frsvg { width:100%; height:auto; display:block; } .frsvg * { transform-box: fill-box; }
+.fr-crow { animation: shiver .14s linear infinite alternate; transform-origin: 50% 90%; }
+@keyframes shiver { from { transform: translateX(-1.6px) rotate(-.7deg); } to { transform: translateX(1.6px) rotate(.7deg); } }
+.fr-head { animation: shiver .11s .04s linear infinite alternate; }
+.fr-sn { animation: snowfall 3.2s linear infinite; }
+.fr-sn.s2{animation-delay:.6s} .fr-sn.s3{animation-delay:1.2s} .fr-sn.s4{animation-delay:1.8s} .fr-sn.s5{animation-delay:2.4s}
+@keyframes snowfall { from { transform: translateY(-8px); opacity:1; } to { transform: translateY(160px); opacity:.2; } }
+.fr-breath { animation: breathPuff 2.4s ease-out infinite; }
+@keyframes breathPuff { 0%,55%{opacity:0; transform:scale(.4)} 65%{opacity:.8} 100%{opacity:0; transform:scale(1.6) translateX(10px)} }

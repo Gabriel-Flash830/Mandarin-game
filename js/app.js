@@ -814,6 +814,28 @@
       </g>
     </g>
   </svg>`;
+  // Frozen crow: icicles, shivering, hugging himself — shown on a chilling score.
+  const FROZEN_SVG = `<svg viewBox="0 0 240 180" class="frsvg" xmlns="http://www.w3.org/2000/svg">
+    <rect width="240" height="180" rx="14" fill="#dceefb"/>
+    <circle class="fr-sn" cx="40" cy="20" r="3" fill="#fff"/><circle class="fr-sn s2" cx="110" cy="10" r="2.5" fill="#fff"/>
+    <circle class="fr-sn s3" cx="180" cy="24" r="3" fill="#fff"/><circle class="fr-sn s4" cx="220" cy="8" r="2" fill="#fff"/>
+    <circle class="fr-sn s5" cx="70" cy="6" r="2.5" fill="#fff"/>
+    <rect y="164" width="240" height="16" rx="8" fill="#eaf6ff"/>
+    <g class="fr-crow">
+      <ellipse cx="120" cy="118" rx="34" ry="40" fill="#14191f"/>
+      <path d="M92 108 C104 124 136 124 148 108 C142 134 98 134 92 108 Z" fill="#0d1319"/>
+      <path d="M90 100 C108 92 132 92 150 100 C142 114 98 114 90 100 Z" fill="#233242"/>
+      <g class="fr-head">
+        <circle cx="120" cy="66" r="27" fill="#14191f"/>
+        <path d="M144 62 L166 68 L144 74 Z" fill="#e0b53a"/>
+        <path d="M148 74 l3 10 l4 -9 M156 73 l2 8 l4 -7" stroke="#bfe6ff" stroke-width="3" stroke-linecap="round" fill="none"/>
+        <circle cx="128" cy="58" r="6.5" fill="#fff"/><circle cx="129" cy="60" r="3" fill="#222"/>
+        <path d="M104 50 l4 12 l5 -11 M96 58 l3 10 l5 -9" stroke="#bfe6ff" stroke-width="3" stroke-linecap="round" fill="none"/>
+      </g>
+      <ellipse class="fr-breath" cx="172" cy="60" rx="8" ry="5" fill="#fff" opacity="0"/>
+      <rect x="108" y="156" width="5" height="9" rx="2" fill="#e0b53a"/><rect x="126" y="156" width="5" height="9" rx="2" fill="#e0b53a"/>
+    </g>
+  </svg>`;
   // Night watch: moonlit sky, drifting clouds, city skyline, the crow leaning
   // on a lamppost gazing over the city. (User storyboard — original art.)
   const NIGHT_SVG = `<svg viewBox="0 0 340 190" class="nwsvg" xmlns="http://www.w3.org/2000/svg">
@@ -901,8 +923,8 @@
 
   // Staged duo celebrations: entrance → performance → sparkle. The crow and
   // the language's animal run in, land with squash-&-stretch, and perform.
-  function celebrate(mascot) {
-    const v = sample(['party', 'fireworks', 'trophy', 'highfive', 'fly', 'confetti', 'night', 'mj', 'genius'], 1)[0];
+  function celebrate(mascot, acc) {
+    const v = (acc != null && acc < 60) ? 'frozen' : sample(['party', 'fireworks', 'trophy', 'highfive', 'fly', 'confetti', 'night', 'mj', 'genius'], 1)[0];
     const pal = `<span class="pal">${mascot}</span>`;
     const conf = Array.from({ length: 18 }, (_, i) =>
       `<span class="conf" style="left:${3 + i * 5.4}%;animation-delay:${(i % 9) * 0.12}s;font-size:${16 + (i % 3) * 5}px">${['🎉', '⭐', '✨', '🟡', '🔴', '🔵', '🟣', '💛', '🎊'][i % 9]}</span>`).join('');
@@ -927,10 +949,11 @@
       night: `<div class="cstage nightScene">${NIGHT_SVG}</div>`,
       mj: `<div class="cstage"><span class="disco">🪩</span>${notes}<div class="mjw">${MJ_SVG}</div><span class="spotL"></span><span class="spotR"></span></div>`,
       genius: `<div class="cstage"><div class="thw">${TAP_SVG}</div><span class="th-bulb">💡</span></div>`,
+      frozen: `<div class="cstage"><div class="frw">${FROZEN_SVG}</div></div>`,
     };
     const titles = {
       party: '🎉 You crushed it!', fireworks: '🎆 Spectacular!', trophy: '🏆 Champion run!',
-      highfive: '🙌 Nailed it together!', fly: '🦸 Superhero landing!', night: '🌙 Night watch — the city can rest.', mj: '🕺 Moonwalk master!', genius: "☝️ Can't forget what you've mastered.", confetti: 'You nailed it!',
+      highfive: '🙌 Nailed it together!', fly: '🦸 Superhero landing!', night: '🌙 Night watch — the city can rest.', mj: '🕺 Moonwalk master!', genius: "☝️ Can't forget what you've mastered.", frozen: '🥶 B-b-brrr… a chilly one. Warm up in Study!', confetti: 'You nailed it!',
     };
     return `<div class="celebrate ${v}">${stages[v]}<h1 class="cmaster">${titles[v]}</h1></div>`;
   }
@@ -951,7 +974,7 @@
          <div class="card-grid" style="max-width:340px;margin:10px auto 0;padding:0">${newCards.map(t => glyphCard(t, true).outerHTML).join('')}</div></div>` : '';
     // celebratory animation (random variant, themed to the language mascot)
     $('#lesson').innerHTML = `<div class="lesson"><div class="complete">
-      ${celebrate(c.mascot)}
+      ${celebrate(c.mascot, Math.round(100 * (L.queue.length - L.mistakes) / L.queue.length))}
       <div class="reward-row">
         <div class="reward"><div class="rk">XP</div><div class="rv">+${gainXP}</div></div>
         <div class="reward"><div class="rk">Top combo</div><div class="rv">${L.bestCombo}🔥</div></div>
