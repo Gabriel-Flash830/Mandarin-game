@@ -59,3 +59,45 @@ Tests: open `/tests.html` — 226 data checks, keep them green.
 - Friend-add-by-code is local-cosmetic until cloud-live friends lands.
 - Low-resource languages (Zulu/Yoruba/etc.) need native-speaker review.
 - Leftover test rows in cloud profiles (TestHost etc.) — harmless.
+
+## DEPLOYMENT (live state)
+- GitHub: https://github.com/Gabriel-Flash830/Mandarin-game (pushed via GitHub
+  Desktop; the user is NOT comfortable with Terminal — never ask them to use it).
+- Cloudflare deployed it as a WORKER (static assets) named `mandarin-game`.
+  URL enabled via Settings → Domains & Routes → workers.dev.
+- Cloudflare's bot added a wrangler autoconfig commit ON GITHUB that local
+  repos don't have. Before shipping updates: user clicks "Fetch origin"/"Pull"
+  in GitHub Desktop FIRST.
+- Update flow (no Terminal): agent edits /Users/home/Mandarin Game (canonical,
+  full git history), bumps ?v= in index.html, commits locally, then rsyncs to
+  /Users/home/Documents/GitHub/Mandarin-game (Desktop-managed clone, excluding
+  .git/.claude); user clicks Commit + Push in GitHub Desktop → auto-deploys.
+
+## QUALITY PLAYBOOK (read this, whichever model you are)
+1. VERIFY BEFORE CLAIMING. Open the browser preview and exercise the feature,
+   or state plainly it is unverified. Never say "fixed" from code alone.
+2. Run /tests.html after ANY data/courses.js change (must stay all-green).
+3. Bump ?v=N on all three asset tags in index.html every ship, or users get
+   stale caches and report ghost bugs.
+4. Patch via python with exact-anchor asserts (see git history) — if an anchor
+   misses, STOP and re-read the file; never fuzzy-replace.
+5. Grep that your new function is actually CALLED (mountCrows once shipped
+   defined-but-never-invoked; a MutationObserver now guards celebrations).
+6. Never name a celebration variant after an element class (.trophy collision
+   broke layout once; ornament is .cup).
+7. Be honest about tiers: bots vs async-inbox play vs live realtime. Do not
+   label bot play as multiplayer.
+8. Course content: only vocabulary you are certain of; low-resource languages
+   get flagged for native review, not invented.
+9. The user is non-technical, sharp at QA, and values honesty over polish.
+   Give click-by-click steps, never Terminal. End every session: commit, test,
+   update this file, tell them how to open the app.
+
+## PRIORITIES (next sessions, in order)
+1. Enable/verify worldwide URL end-to-end (phone install, cloud green).
+2. Phase-2 hardening: clean cloud test rows, tighten matches RLS, weekly XP
+   reset, name moderation — BEFORE sharing the URL publicly.
+3. The 4 storyboards: First Flight, The Library, Rainy Window, The Duel.
+4. Real-friend tournaments (use 🟢 friends + matches table) and live realtime
+   play (Supabase Realtime).
+5. Cloud save/restore (saves table SQL above), deeper es/fr content.
