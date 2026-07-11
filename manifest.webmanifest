@@ -1,0 +1,17 @@
+{
+  "name": "WordWisp — Learn Languages",
+  "short_name": "WordWisp",
+  "description": "Mastered, not memorized. Learn languages with bite-size lessons, a study archive, collectible word cards, and rival battles. Built original and ready for any language.",
+  "lang": "en",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbf8f1",
+  "theme_color": "#0e9594",
+  "categories": ["education", "games"],
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

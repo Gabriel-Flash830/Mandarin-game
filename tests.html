@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>WordWisp — data integrity tests</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 30px auto; padding: 0 16px; background:#fbf8f1; color:#20323a; }
+    h1 { font-size: 22px; } .pass { color: #0b736e; } .fail { color: #c0392b; font-weight: 700; }
+    li { margin: 3px 0; font-size: 14px; } #summary { font-size: 18px; font-weight: 800; margin: 14px 0; }
+  </style>
+</head>
+<body>
+  <h1>🐦‍⬛ WordWisp — automated data tests</h1>
+  <div id="summary">Running…</div>
+  <ul id="out"></ul>
+  <script src="data/courses.js"></script>
+  <script>
+    const out = document.getElementById('out');
+    let pass = 0, fail = 0;
+    const t = (name, ok, detail) => {
+      const li = document.createElement('li');
+      li.className = ok ? 'pass' : 'fail';
+      li.textContent = (ok ? '✅ ' : '❌ ') + name + (ok ? '' : ' — ' + detail);
+      out.appendChild(li); ok ? pass++ : fail++;
+    };
+
+    const { COURSES, REALMS, allTerms } = window.LINGO;
+    const courses = Object.values(COURSES);
+
+    // 1. course shape
+    courses.forEach(c => {
+      const missing = ['id','name','native','flag','region','tts','mascot','accent','lives','rivals','units']
+        .filter(k => c[k] == null);
+      t(`course ${c.id}: required fields`, missing.length === 0, 'missing ' + missing.join(','));
+      t(`course ${c.id}: ≥5 rivals for the boss ladder`, (c.rivals || []).length >= 5, `has ${(c.rivals||[]).length}`);
+      t(`course ${c.id}: rival ids unique`, new Set(c.rivals.map(r => r.id)).size === c.rivals.length, 'duplicate rival ids');
+    });
+
+    // 2. term integrity
+    courses.forEach(c => {
+      const terms = allTerms(c.id);
+      t(`course ${c.id}: ≥8 terms (enough for 4-option questions)`, terms.length >= 8, `has ${terms.length}`);
+      const ids = terms.map(x => x.id);
+      t(`course ${c.id}: term ids unique`, new Set(ids).size === ids.length, 'duplicates');
+      const badRealm = terms.filter(x => !REALMS[x.realm]);
+      t(`course ${c.id}: realms valid`, badRealm.length === 0, badRealm.map(x => x.term).join(','));
+      const empty = terms.filter(x => !x.term || !x.en || !x.emoji);
+      t(`course ${c.id}: no empty term/en/emoji`, empty.length === 0, empty.map(x => x.id).join(','));
+      const enSet = {};
+      terms.forEach(x => (enSet[x.en] = (enSet[x.en] || 0) + 1));
+      const cards = terms.filter(x => x.card);
+      t(`course ${c.id}: ≥1 collectible card`, cards.length >= 1, 'none');
+    });
+
+    // 3. regions: at least 3 languages each
+    const byRegion = {};
+    courses.forEach(c => (byRegion[c.region] = byRegion[c.region] || []).push(c.id));
+    Object.entries(byRegion).forEach(([r, list]) =>
+      t(`region ${r}: ≥3 languages`, list.length >= 3, list.join(',')));
+
+    // 4. reading-consistency: zh/ja/ru/th/el/ar/he/hi/ur/bn should have readings on all terms
+    ['zh','ja','ru','th','el','ar','he','hi','ur','bn'].forEach(id => {
+      if (!COURSES[id]) return;
+      const noRead = allTerms(id).filter(x => !x.reading);
+      t(`course ${id}: every term has a reading/romanization`, noRead.length === 0,
+        noRead.slice(0, 5).map(x => x.term).join(','));
+    });
+
+    // 5. deep course sanity: Mandarin examples on collectible cards
+    const zhCardsNoEx = allTerms('zh').filter(x => x.card && !x.ex);
+    t('zh: all collectible cards have example sentences', zhCardsNoEx.length === 0,
+      zhCardsNoEx.map(x => x.term).join(','));
+
+    document.getElementById('summary').innerHTML =
+      fail === 0 ? `<span class="pass">All ${pass} checks passed ✅</span>`
+                 : `<span class="fail">${fail} failed</span> / ${pass + fail} checks`;
+  </script>
+</body>
+</html>

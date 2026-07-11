@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#0e9594" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>WordWisp — learn languages</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css?v=32" />
+  <script src="lottie/lottie.min.js" defer></script>
+</head>
+<body>
+  <!-- Top stat bar -->
+  <div class="topbar">
+    <button class="lang" id="lang-btn" data-action="open-langpicker">🇨🇳 中文 ▾</button>
+    <div class="stats">
+      <div class="stat fire" title="Day streak"><span class="ic">🔥</span><span id="s-fire">0</span><small class="slbl">Streak</small></div>
+      <div class="stat gem" title="Gems — spend on refills"><span class="ic">💎</span><span id="s-gem">0</span><small class="slbl">Gems</small></div>
+      <div class="stat life" title="Lives — lose one per mistake"><span class="ic" id="s-life-ic">🏮</span><span id="s-life">5</span><small class="slbl">Lives</small></div>
+      <div class="stat xp" title="XP — experience points earned by learning"><span class="ic">⭐</span><span id="s-xp">0</span><small class="slbl">XP</small></div>
+    </div>
+  </div>
+
+  <!-- App screens -->
+  <div class="shell" id="app">
+    <section id="scr-learn" class="screen active"></section>
+    <section id="scr-study" class="screen"></section>
+    <section id="scr-cards" class="screen"></section>
+    <section id="scr-battle" class="screen"></section>
+    <section id="scr-me" class="screen"></section>
+  </div>
+
+  <!-- Bottom tab bar -->
+  <nav class="tabbar">
+    <button class="tab active" data-action="nav" data-id="learn"><span class="ti">🏠</span><small>Learn</small></button>
+    <button class="tab" data-action="nav" data-id="study"><span class="ti">📖</span><small>Study</small></button>
+    <button class="tab" data-action="nav" data-id="cards"><span class="ti">🃏</span><small>Cards</small></button>
+    <button class="tab" data-action="nav" data-id="battle"><span class="ti">🏆</span><small>Arena</small></button>
+    <button class="tab" data-action="nav" data-id="me"><span class="ti">😀</span><small>Me</small></button>
+  </nav>
+
+  <!-- Full-screen lesson / battle overlay -->
+  <div id="lesson" class="hidden" style="position:fixed;inset:0;z-index:50;background:var(--paper);overflow:auto"></div>
+
+  <!-- Language picker modal -->
+  <div id="modal" class="modal-bg" hidden>
+    <div class="modal" id="modal-body"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="data/courses.js?v=32"></script>
+  <script src="js/app.js?v=32"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+  </script>
+</body>
+</html>

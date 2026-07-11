@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- zero out all color channels, keep alpha → the emoji's exact shape in solid black -->
+    <filter id="allblack">
+      <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#0e9594"/>
+  <text x="256" y="352" font-size="300" text-anchor="middle" filter="url(#allblack)"
+        font-family="'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif">🐦‍⬛</text>
+</svg>

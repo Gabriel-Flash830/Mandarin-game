@@ -1,0 +1,22 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Node (only if you later add Capacitor)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Capacitor / native build output
+/ios/App/Pods/
+/ios/App/build/
+/android/.gradle/
+/android/app/build/
+*.xcuserstate
+
+# Tooling
+.claude/
+scratchpad/
