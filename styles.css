@@ -201,7 +201,8 @@ button { font-family: inherit; cursor: pointer; }
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center;
   background:#fff; border:1px solid var(--line); box-shadow:0 10px 30px rgba(0,0,0,.10); }
 .flip .back { transform:rotateY(180deg); background:linear-gradient(160deg,#fff,#f7fbfa); }
-.flip .topglyph { font-size:78px; font-weight:900; line-height:1; }
+.flip .topglyph { font-size:78px; font-weight:900; line-height:1.02; }
+.flip .topglyph, .flip .big-py, .flip .big-en { max-width:100%; overflow-wrap:anywhere; word-break:break-word; }
 .flip .big-py { font-size:34px; font-weight:800; color:var(--jade-d); }
 .flip .big-en { font-size:30px; font-weight:800; }
 .flip .small-cap { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--muted); }

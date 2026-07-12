@@ -1277,10 +1277,20 @@
     renderStudyCard();
   }
   const seg = (key, val, label) => `<button data-action="study-set" data-key="${key}" data-val="${val}" class="${(key === 'deck' ? S.studyDeck : key === 'front' ? safeFront() : S.studyMode) === val ? 'on' : ''}">${label}</button>`;
+  // Shrink big card text so long words (Zulu "sawubona", German, etc.) stay inside
+  // the ~250px card instead of spilling out the sides. CJK glyphs are ~full-width.
+  function glyphSize(text, base) {
+    const s = String(text || '').trim();
+    const cjk = /[぀-ヿ㐀-鿿가-힯豈-﫿]/.test(s);
+    let units = 0;                              // estimated width of the WHOLE term, in font-size units
+    for (const ch of s) { const c = ch.charCodeAt(0), wide = (c >= 0x3040 && c <= 0x9fff) || (c >= 0xac00 && c <= 0xd7af) || (c >= 0xf900 && c <= 0xfaff); units += /\s/.test(ch) ? 0.34 : wide ? 1.0 : 0.70; }
+    const fit = 248 / Math.max(units, 0.70);    // largest size that keeps the whole term on one line (fits the ~256px card)
+    return Math.max(18, Math.min(base, Math.round(fit)));
+  }
   function frontFace(t, front) {
-    if (front === 'py') return `<div class="big-py">${esc(t.reading || t.term)}</div><div class="small-cap">${tl('tap to reveal')}</div>`;
-    if (front === 'mean') return `<div class="big-en">${esc(tm(t.en))}</div><div class="small-cap">${tl('tap to reveal')}</div>`;
-    return `<div class="topglyph">${esc(t.term)}</div><div class="small-cap">${tl('tap to reveal')}</div>`;
+    if (front === 'py') return `<div class="big-py" style="font-size:${glyphSize(t.reading || t.term, 34)}px">${esc(t.reading || t.term)}</div><div class="small-cap">${tl('tap to reveal')}</div>`;
+    if (front === 'mean') return `<div class="big-en" style="font-size:${glyphSize(tm(t.en), 30)}px">${esc(tm(t.en))}</div><div class="small-cap">${tl('tap to reveal')}</div>`;
+    return `<div class="topglyph" style="font-size:${glyphSize(t.term, 78)}px">${esc(t.term)}</div><div class="small-cap">${tl('tap to reveal')}</div>`;
   }
   function renderStudyCard() {
     const wrap = $('#study-wrap'); if (!wrap) return;
@@ -1291,9 +1301,9 @@
         <div class="ff">
           <div class="side front">${frontFace(t, front)}<div class="realm-tag">${r.icon} ${r.name}</div></div>
           <div class="side back">
-            <div class="topglyph" style="font-size:54px">${esc(t.term)}</div>
-            ${t.reading ? `<div class="big-py" style="font-size:24px">${esc(t.reading)}</div>` : ''}
-            <div class="big-en" style="font-size:22px">${esc(tm(t.en))}</div>
+            <div class="topglyph" style="font-size:${glyphSize(t.term, 54)}px">${esc(t.term)}</div>
+            ${t.reading ? `<div class="big-py" style="font-size:${glyphSize(t.reading, 24)}px">${esc(t.reading)}</div>` : ''}
+            <div class="big-en" style="font-size:${glyphSize(tm(t.en), 22)}px">${esc(tm(t.en))}</div>
             ${t.ex ? `<div class="ex"><div class="exs">${esc(t.ex)}</div>${t.exr ? `<div class="exr">${esc(t.exr)}</div>` : ''}<div class="exe">${esc(t.exen)}</div></div>` : ''}
           </div>
         </div>
