@@ -93,6 +93,13 @@ Tests: open `/tests.html` — 226 data checks, keep them green.
    Give click-by-click steps, never Terminal. End every session: commit, test,
    update this file, tell them how to open the app.
 
+## NEXT BUILD SPEC — per-question live ticks (makes races FEEL live)
+Encode progress in the existing score columns (no SQL needed): while playing,
+PATCH your column to (questionIndex*10 + score); on finish PATCH (100 + score).
+Reader: v>=100 → final (v-100); else in-progress. renderQuiz polls the
+opponent column every 2s and shows 'Q3 · 2pts' ticking; pollResult decodes
+finals. Test with two browser profiles BEFORE shipping.
+
 ## PRIORITIES (next sessions, in order)
 1. Enable/verify worldwide URL end-to-end (phone install, cloud green).
 2. Phase-2 hardening: clean cloud test rows, tighten matches RLS, weekly XP

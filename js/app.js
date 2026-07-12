@@ -1283,7 +1283,7 @@
     $('#lesson').classList.remove('hidden'); renderQuiz();
   }
   function renderQuiz() {
-    if (Q.idx >= Q.qs.length) { const bot = Q.fixed != null ? Q.fixed : Q.bot; const won = Q.me >= bot; const cb = Q.onDone; $('#lesson').classList.add('hidden'); return cb(won, Q.me, bot); }
+    if (Q.idx >= Q.qs.length) { const bot = Q.fixed != null ? Q.fixed : Q.bot; const won = Q.me > bot; const cb = Q.onDone; $('#lesson').classList.add('hidden'); return cb(won, Q.me, bot); }
     const q = Q.qs[Q.idx];
     $('#lesson').innerHTML = `<div class="lesson">
       <div class="lhead"><button class="close" data-action="quiz-quit">✕</button>
@@ -1328,7 +1328,7 @@
     const L = $('#lesson'); L.classList.remove('hidden');
     L.innerHTML = `<div class="lesson"><div class="complete"><div class="big">⏳</div>
       <h1>Waiting for ${esc(opp.name)}…</h1>
-      <p class="center" style="color:var(--muted)">You scored <b>${mine}/5</b>. The result appears the moment they finish.</p>
+      <p class="center" style="color:var(--muted)">You scored <b>${mine}</b>. The result appears the moment they finish.</p>
       <div class="mt"><button class="btn ghost" data-action="quiz-quit">Check later</button></div></div></div>`;
     let n = 0;
     const iv = setInterval(async () => {
@@ -1352,22 +1352,25 @@
       { headers: sbH(CLOUD.session.access_token) })
       .then(r => r.ok ? r.json() : []).then(async ms => {
         INBOX = ms; const d = $('#fr-inbox'); if (!d) return;
-        if (!ms.length) { d.innerHTML = '<div class="seg-label">📬 Challenges for you</div><p class="note" style="margin:4px 0 10px">None yet — when a 🟢 friend taps ⚔️ on you from THEIR device, it lands here.</p>'; return; }
+        if (ms.some(m => m.host_score == null)) window.__inboxOpen = true;   // live race → pop open
+        const head = `<button class="seg-label" data-action="toggle-inbox" style="background:none;border:none;cursor:pointer;padding:0;display:block">📬 Challenges (${ms.length}) ${window.__inboxOpen ? '▾' : '▸'}</button>`;
+        if (!ms.length) { d.innerHTML = head; return; }
+        if (!window.__inboxOpen) { d.innerHTML = head; return; }
         const ids = [...new Set(ms.map(m => m.host))]; const names = {};
         try { (await fetch(SB_URL + '/rest/v1/profiles?select=id,name&id=in.(' + ids.join(',') + ')',
           { headers: sbH(CLOUD.session.access_token) }).then(r => r.json())).forEach(p => { names[p.id] = p.name; }); } catch {}
-        d.innerHTML = '<div class="seg-label">📬 Challenges for you</div>' + ms.map(m =>
+        d.innerHTML = head + ms.slice(0, 3).map(m =>
           `<div class="frow"><div class="fav">${m.host_score == null ? '🔴' : '🎯'}</div><div class="fnm">${m.host_score == null
             ? esc(names[m.host] || 'A friend') + ' — LIVE race, join now!'
-            : esc(names[m.host] || 'A friend') + ' scored ' + m.host_score + '/5 — beat it!'}</div>
-           <button class="btn sm" data-action="play-inbox" data-id="${m.id}">Play</button></div>`).join('');
+            : esc(names[m.host] || 'A friend') + ' scored ' + m.host_score + '/' + ((m.term_ids || []).length || 5) + ' — beat it!'}</div>
+           <button class="btn sm" data-action="play-inbox" data-id="${m.id}">Play</button></div>`).join('') + (ms.length > 3 ? `<p class="note">…and ${ms.length - 3} more</p>` : '');
       }).catch(() => {});
   }
   function challengeFriend(id) {
     ensureFriends();
     const f = S.friends.find(x => x.id === id); if (!f) return;
     if ((f.id || '').length > 20 && sbUid()) {          // real friend → live race
-      const picks = sample(battlePool(), 5);
+      const picks = sample(allTerms(S.courseId), 7);   // wider pool + 7 Qs → fewer ties
       (async () => {
         const mid = await sbCreateMatch(picks.map(p => p.id), null, f.id);   // created BEFORE playing
         toast('🔴 Live! Tell ' + f.name + ' to open Arena → Friends NOW');
@@ -1615,6 +1618,7 @@
       case 'remove-friend': removeFriend(a.id); break;
       case 'challenge-friend': challengeFriend(a.id); break;
       case 'bot-race': quizRace({ name: 'Bot', av: '🤖', skill: +a.skill }, (won, me, bot) => { if (won) { S.gems += 6; S.xp += 8; S.xpWeek += 8; persist(); renderTop(); } showMatchResult(won, me, bot, { name: 'Bot', av: '🤖' }); }); break;
+      case 'toggle-inbox': window.__inboxOpen = !window.__inboxOpen; loadInbox(); break;
       case 'play-inbox': { const m = INBOX.find(x => x.id === a.id); if (!m) break;
         if (COURSES[m.course]) { S.courseId = m.course; applyTheme(); renderTop(); }
         const terms = allTerms(m.course).filter(t => (m.term_ids || []).includes(t.id));
