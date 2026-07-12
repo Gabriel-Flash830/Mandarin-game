@@ -628,7 +628,7 @@
     const c = course();
     $('#lesson').classList.remove('hidden');
     $('#lesson').innerHTML = `<div class="lesson"><div class="complete">
-      ${celebrate(c.mascot, null, 'rainy')}
+      ${celebrate(c.mascot, null, 'rainy', true)}
       <p class="center" style="color:var(--muted)">A 🧊 streak freeze kept your <b>${S.streak}</b>-day streak alive. Warm and dry — pick up right where you left off.</p>
       <div class="mt"><button class="btn" data-action="lesson-quit">Continue</button></div></div></div>`;
   }
@@ -801,22 +801,33 @@
   </svg>`;
   // Temple-tap meme: smug crow, one wing feather tapping his head. Can't
   // forget a word you've mastered. (User storyboard.)
-  const TAP_SVG = `<svg viewBox="0 0 200 170" class="thsvg" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="100" cy="160" rx="46" ry="7" fill="#000" opacity=".12"/>
-    <ellipse cx="100" cy="112" rx="34" ry="40" fill="#14191f"/>
-    <path d="M76 96 C66 104 62 116 64 128 C72 124 78 116 80 106 Z" fill="#0d1319"/>
-    <g class="th-head">
-      <circle cx="104" cy="62" r="30" fill="#14191f"/>
-      <path d="M130 56 L156 62 L130 70 Z" fill="#f4c542"/>
-      <path d="M126 72 C130 76 136 76 140 73" stroke="#f4c542" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <circle cx="114" cy="54" r="7" fill="#fff"/><circle cx="116" cy="55" r="3.4" fill="#222"/>
-      <path d="M88 50 C92 46 100 45 104 48" stroke="#0a0f14" stroke-width="4" stroke-linecap="round" fill="none"/>
-      <path d="M92 56 C96 53 102 53 106 55 L106 60 C100 58 95 58 92 60 Z" fill="#14191f"/>
-      <circle cx="98" cy="57" r="4.6" fill="#fff"/><circle cx="99.5" cy="58" r="2.4" fill="#222"/>
+  // The Thinker crow with a monocle — Rodin pose: hunched on a plinth, chin on fist.
+  const TAP_SVG = `<svg viewBox="0 0 200 175" class="thsvg" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="100" cy="164" rx="56" ry="8" fill="#000" opacity=".12"/>
+    <path d="M48 156 C44 138 62 131 82 133 L120 133 C142 131 156 141 152 156 Z" fill="#9aa0a6"/>
+    <rect x="48" y="153" width="104" height="9" rx="4.5" fill="#7c8288"/>
+    <g class="th-fig">
+      <ellipse cx="90" cy="124" rx="35" ry="23" fill="#141a20"/>
+      <ellipse cx="126" cy="120" rx="17" ry="13" fill="#10161c"/>
+      <path d="M120 130 l19 0 l3 8 l-25 0 Z" fill="#f4c542"/>
+      <path d="M62 140 l17 0 l3 7 l-23 0 Z" fill="#e0b23a"/>
+      <path d="M72 122 C63 98 76 74 100 70 C114 68 124 76 126 88 C121 98 117 108 117 118 C103 121 86 122 72 122 Z" fill="#141a20"/>
+      <g class="th-head">
+        <circle cx="104" cy="70" r="25" fill="#141a20"/>
+        <path d="M90 86 L80 104 L100 95 Z" fill="#f4c542"/>
+        <path d="M99 52 C106 47 117 48 122 54" stroke="#0a0f14" stroke-width="3.6" stroke-linecap="round" fill="none"/>
+        <circle cx="113" cy="65" r="4.4" fill="#fff"/><circle cx="114" cy="66" r="2.2" fill="#222"/>
+        <circle class="th-mono" cx="113" cy="65" r="9" fill="none" stroke="#e8b13a" stroke-width="2"/>
+        <path d="M115 74 C118 84 115 92 107 97" stroke="#e8b13a" stroke-width="1.5" fill="none"/>
+      </g>
+      <g class="th-arm">
+        <path d="M126 120 C122 107 113 99 104 97 C99 99 97 104 100 108 C109 110 117 114 121 122 Z" fill="#0d1319"/>
+        <ellipse cx="102" cy="98" rx="8.5" ry="7.5" fill="#12181f"/>
+      </g>
     </g>
-    <g class="th-wing"><path d="M74 108 C64 92 66 74 78 62 C84 58 90 56 94 56 C90 64 86 74 86 84 C84 96 80 104 74 108 Z" fill="#0d1319"/>
-      <path d="M92 58 L96 50 L100 57 Z" fill="#0d1319"/></g>
-    <g class="th-spark"><circle cx="70" cy="34" r="2.5" fill="#f6c445"/><path d="M60 26 l4 4 M58 40 l5 -1 M70 20 l1 5" stroke="#f6c445" stroke-width="2.5" stroke-linecap="round"/></g>
+    <g class="th-think" fill="#9aa0a6">
+      <circle class="th-d d1" cx="140" cy="54" r="2.4"/><circle class="th-d d2" cx="151" cy="42" r="3"/><circle class="th-d d3" cx="164" cy="28" r="3.8"/>
+    </g>
   </svg>`;
   // Moonwalk crow: fedora + white glove, gliding backward, spin, toe-stand.
   const MJ_SVG = `<svg viewBox="0 0 240 170" class="mjsvg" xmlns="http://www.w3.org/2000/svg">
@@ -1063,6 +1074,47 @@
       </g>
     </g>
   </svg>`;
+  // The Samurai: a lone crow master under the moon, katana at his side, cherry
+  // blossoms on the wind — staring off into the distance.
+  const SAM_SVG = `<svg viewBox="0 0 340 190" class="samsvg" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="samsky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#221a3a"/><stop offset=".55" stop-color="#48294f"/><stop offset="1" stop-color="#8a3f56"/></linearGradient></defs>
+    <rect width="340" height="190" rx="14" fill="url(#samsky)"/>
+    <circle cx="248" cy="56" r="30" fill="#f3e6c8"/>
+    <circle cx="240" cy="48" r="5" fill="#ddcaa0" opacity=".55"/><circle cx="256" cy="62" r="4" fill="#ddcaa0" opacity=".5"/><circle cx="252" cy="46" r="3" fill="#ddcaa0" opacity=".4"/>
+    <path d="M-4 152 L60 118 L120 152 Z" fill="#2a1e3e" opacity=".85"/>
+    <path d="M96 152 L164 112 L232 152 Z" fill="#241a36" opacity=".7"/>
+    <rect y="150" width="340" height="40" fill="#160f22"/>
+    <path d="M0 150 Q170 143 340 150 L340 156 L0 156 Z" fill="#0f0a18"/>
+    <g class="sam-tree">
+      <path d="M40 152 C42 122 34 98 28 80 M28 80 C22 68 12 64 6 66 M28 80 C40 68 54 68 60 74 M34 108 C40 100 48 100 54 104" stroke="#2a1a12" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <g fill="#f0a0bd"><ellipse cx="12" cy="60" rx="16" ry="11"/><ellipse cx="40" cy="52" rx="21" ry="13"/><ellipse cx="62" cy="66" rx="15" ry="10"/><ellipse cx="32" cy="72" rx="14" ry="9"/></g>
+      <g fill="#f9c6d8" opacity=".85"><ellipse cx="26" cy="52" rx="9" ry="6"/><ellipse cx="52" cy="58" rx="7" ry="5"/></g>
+    </g>
+    <g class="sam-petals" fill="#f9c6d8">
+      <ellipse class="sam-petal p1" cx="0" cy="0" rx="3.4" ry="2"/><ellipse class="sam-petal p2" cx="0" cy="0" rx="3" ry="1.8"/>
+      <ellipse class="sam-petal p3" cx="0" cy="0" rx="3.6" ry="2.1"/><ellipse class="sam-petal p4" cx="0" cy="0" rx="2.8" ry="1.7"/>
+      <ellipse class="sam-petal p5" cx="0" cy="0" rx="3.2" ry="1.9"/>
+    </g>
+    <g class="sam-crow">
+      <g class="sam-sword">
+        <path d="M197 126 L216 172 L211 174 L192 128 Z" fill="#cdd6de"/>
+        <rect x="189" y="120" width="10" height="4" rx="2" transform="rotate(24 194 122)" fill="#c98a2e"/>
+        <rect x="188" y="122" width="4" height="12" rx="2" transform="rotate(24 190 128)" fill="#2a1c12"/>
+      </g>
+      <path class="sam-robe" d="M168 106 C158 128 154 150 149 168 C168 162 190 162 199 168 C196 146 192 126 188 106 Z" fill="#161020"/>
+      <path class="sam-hem" d="M149 168 C160 163 190 163 199 168 L199 175 C190 170 160 170 149 175 Z" fill="#0e0916"/>
+      <ellipse cx="178" cy="102" rx="18" ry="22" fill="#14191f"/>
+      <path d="M188 98 C197 104 199 114 197 123 C191 120 185 113 183 104 Z" fill="#0d1319"/>
+      <g class="sam-head">
+        <circle cx="182" cy="76" r="14" fill="#14191f"/>
+        <path d="M195 74 L212 78 L195 82 Z" fill="#f4c542"/>
+        <circle cx="187" cy="73" r="3.2" fill="#fff"/><circle cx="188" cy="73.5" r="1.6" fill="#20303e"/>
+        <path d="M175 64 C177 55 181 53 183 54 C185 57 184 62 181 66 Z" fill="#0d1319"/>
+        <path d="M170 72 L162 69 L170 78 Z" fill="#0d1319"/>
+      </g>
+    </g>
+  </svg>`;
   // Celebration crow: the user's animated Lottie crow (vendored offline in
   // lottie/), with emoji fallback if the player didn't load.
   let CROW_ANIM = null;   // preloaded so the crow can never fail to appear
@@ -1082,11 +1134,13 @@
 
   // Staged duo celebrations: entrance → performance → sparkle. The crow and
   // the language's animal run in, land with squash-&-stretch, and perform.
-  function celebrate(mascot, acc, forced) {
+  function celebrate(mascot, acc, forced, earn) {
     // forced = storyboard variant tied to a specific trigger (never random):
     // 'firstflight' first-ever lesson · 'library' unit mastered ·
     // 'rainy' streak saved by a freeze · 'duel' final boss beaten
-    const v = forced || ((acc != null && acc < 60) ? 'frozen' : sample(['party', 'fireworks', 'trophy', 'highfive', 'fly', 'confetti', 'night', 'mj', 'genius'], 1)[0]);
+    // earn = this is a REAL trigger (not a gallery replay) → mark it collected.
+    const v = forced || ((acc != null && acc < 60) ? 'frozen' : sample(['party', 'fireworks', 'trophy', 'highfive', 'fly', 'confetti', 'night', 'mj', 'genius', 'samurai'], 1)[0]);
+    if (earn) { S.celeSeen = S.celeSeen || {}; if (!S.celeSeen[v]) { S.celeSeen[v] = 1; persist(); } }
     const pal = `<span class="pal">${mascot}</span>`;
     const conf = Array.from({ length: 18 }, (_, i) =>
       `<span class="conf" style="left:${3 + i * 5.4}%;animation-delay:${(i % 9) * 0.12}s;font-size:${16 + (i % 3) * 5}px">${['🎉', '⭐', '✨', '🟡', '🔴', '🔵', '🟣', '💛', '🎊'][i % 9]}</span>`).join('');
@@ -1110,7 +1164,8 @@
         <div class="duo wide"><span class="enterL">${crow('twirl')}</span><span class="enterR"><span class="pal groove2">${mascot}</span></span></div></div>`,
       night: `<div class="cstage nightScene">${NIGHT_SVG}</div>`,
       mj: `<div class="cstage"><span class="disco">🪩</span>${notes}<div class="mjw">${MJ_SVG}</div><span class="spotL"></span><span class="spotR"></span></div>`,
-      genius: `<div class="cstage"><div class="thw">${TAP_SVG}</div><span class="th-bulb">💡</span></div>`,
+      genius: `<div class="cstage"><div class="thw">${TAP_SVG}</div></div>`,
+      samurai: `<div class="cstage samScene">${SAM_SVG}</div>`,
       frozen: `<div class="cstage"><div class="frw">${FROZEN_SVG}</div></div>`,
       firstflight: `<div class="cstage ffScene">${FF_SVG}</div>`,
       library: `<div class="cstage lbScene">${LB_SVG}</div>`,
@@ -1119,7 +1174,7 @@
     };
     const titles = {
       party: '🎉 You crushed it!', fireworks: '🎆 Spectacular!', trophy: '🏆 Champion run!',
-      highfive: '🙌 Nailed it together!', fly: '🦸 Superhero landing!', night: '🌙 Night watch — the city can rest.', mj: '🕺 Moonwalk master!', genius: "☝️ Can't forget what you've mastered.", frozen: '🥶 B-b-brrr… a chilly one. Warm up in Study!', confetti: 'You nailed it!',
+      highfive: '🙌 Nailed it together!', fly: '🦸 Superhero landing!', night: '🌙 Night watch — the city can rest.', mj: '🕺 Moonwalk master!', genius: "🧐 Mastered — filed away for good.", samurai: '🌸 The way of the word — mastered.', frozen: '🥶 B-b-brrr… a chilly one. Warm up in Study!', confetti: 'You nailed it!',
       firstflight: '🐣 First flight — you’re airborne!', library: '📚 Unit mastered — shelved for good.',
       rainy: '🌧️ Streak saved — warm and dry inside.', duel: '🌸 The last boss bows. Respect.',
     };
@@ -1148,7 +1203,7 @@
          <div class="card-grid" style="max-width:340px;margin:10px auto 0;padding:0">${newCards.map(t => glyphCard(t, true).outerHTML).join('')}</div></div>` : '';
     // celebratory animation (storyboard variant if a trigger fired, else random)
     $('#lesson').innerHTML = `<div class="lesson"><div class="complete">
-      ${celebrate(c.mascot, Math.round(100 * (L.queue.length - L.mistakes) / L.queue.length), forced)}
+      ${celebrate(c.mascot, Math.round(100 * (L.queue.length - L.mistakes) / L.queue.length), forced, true)}
       <div class="reward-row">
         <div class="reward"><div class="rk">XP</div><div class="rv">+${gainXP}</div></div>
         <div class="reward"><div class="rk">Top combo</div><div class="rv">${L.bestCombo}🔥</div></div>
@@ -1326,9 +1381,9 @@
          <button class="btn" data-action="create-challenge">Send a challenge</button>
          <button class="btn ghost" data-action="join-challenge">Have a code?</button>
        </div>
-       <div class="seg-label" style="margin-top:18px">🌍 Everyone this week (all players)</div>
-       <div id="cloud-lb" class="note">${sbUid() ? '…' : tl('Cloud off — see Me tab')}</div>
-       <p class="note">🏆 above is you + your friends. 🌍 here is the global top 10 across everyone using WordWisp (real cloud server). Tap ⚔️ to race a friend live; “Send a challenge” makes a code to play across devices.</p>`;
+       <button class="seg-label" data-action="toggle-lb" style="margin-top:18px;background:none;border:none;cursor:pointer;padding:0;display:block">🌍 Global top 10 · everyone this week ${window.__lbOpen ? '▾' : '▸'}</button>
+       ${window.__lbOpen ? `<div id="cloud-lb" class="lb-list">${sbUid() ? '…' : tl('Cloud off — see Me tab')}</div>
+       <p class="note">🏆 above is you + your friends. This is the global top 10 across everyone on WordWisp (a real cloud server) — tap the header to collapse.</p>` : ''}`;
     root.appendChild(wrap);
     const cloudIds = (S.friends || []).filter(f => (f.id || '').length > 20).map(f => f.id);
     if (sbUid() && cloudIds.length) {
@@ -1346,9 +1401,9 @@
       if (arenaTab === 'friends' && document.querySelector('#fr-inbox')) loadInbox();
       else clearInterval(window.__inboxIv);
     }, 5000);
-    if (sbUid()) sbLeaderboard().then(rows => { const d = $('#cloud-lb'); if (d) d.innerHTML = rows.length
-      ? rows.map((r, i) => `${i + 1}. <b>${esc(r.name)}</b> — ${r.xp_week} XP`).join('<br>')
-      : 'No players yet — you will appear after your next lesson.'; });
+    if (sbUid() && window.__lbOpen) sbLeaderboard().then(rows => { const d = $('#cloud-lb'); if (d) d.innerHTML = rows.length
+      ? rows.map((r, i) => `<div class="lb-row"><span class="lb-rank">${['🥇', '🥈', '🥉'][i] || (i + 1)}</span><span class="lb-name">${esc(r.name)}</span><span class="lb-xp">${r.xp_week} XP</span></div>`).join('')
+      : '<p class="note">No players yet — you’ll appear here after your next lesson.</p>'; });
   }
   function renderTourney(root) {
     const wrap = el('div', 'pad'); const t = S.tourney;
@@ -1449,7 +1504,7 @@
     const c = course();
     const rivals = c.rivals, finalBoss = won && rivals.length && B.rv.id === rivals[rivals.length - 1].id;
     $('#lesson').innerHTML = `<div class="lesson"><div class="complete">
-      ${finalBoss ? celebrate(c.mascot, null, 'duel') : `<div class="big">${won ? '🏆' : '🙂'}</div>
+      ${finalBoss ? celebrate(c.mascot, null, 'duel', true) : `<div class="big">${won ? '🏆' : '🙂'}</div>
       <h1 style="color:${won ? 'var(--gold-d)' : 'var(--muted)'}">${won ? 'You win!' : 'Good try!'}</h1>`}
       <p class="center" style="color:var(--muted)">${finalBoss ? 'You beat the last boss on the ladder — the whole rooftop bows.' : won ? 'Your recall powered the win.' : 'Study these words, then come back stronger.'}</p>
       <div class="mt"><button class="btn" data-action="battle-quit">Back to Arena</button></div>
@@ -1778,20 +1833,55 @@
         <p class="note" style="margin-top:8px">Get a key at <b>console.cloud.google.com</b> → enable “Cloud Text-to-Speech API”. Stored only on this device. Restrict the key to that API.</p>
       </div>
 
-      <div class="settings-card mt"><div class="seg-label">🎬 ${tl('Celebrations')}</div>
-        <p class="note" style="margin:4px 0 8px">Every crow moment in one place — tap any to watch it. The four story scenes (🐣📚🌧️🌸) also play automatically when you earn them.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">${CELE_GALLERY.map(([v, label]) =>
-          `<button class="btn sm ghost" data-action="play-cele" data-cele="${v}">${label}</button>`).join('')}</div></div>
+      <div class="settings-card mt"><div class="seg-label">🎬 ${tl('Celebrations')} · ${CELE_GALLERY.filter(([v]) => (S.celeSeen || {})[v]).length}/${CELE_GALLERY.length} ${tl('collected')}</div>
+        <p class="note" style="margin:4px 0 8px">Collect them by earning them in play — the four story scenes (🐣📚🌧️🌸) unlock on special moments. Tap any to watch it (✓ = collected).</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">${CELE_GALLERY.map(([v, label]) => {
+          const got = !!(S.celeSeen || {})[v];
+          return `<button class="btn sm ghost cele-chip${got ? ' got' : ''}" data-action="play-cele" data-cele="${v}">${label}${got ? ' ✓' : ''}</button>`; }).join('')}</div></div>
 
+      <div class="mt"><button class="btn ghost" data-action="feedback">💬 ${tl('Send feedback / report a bug')}</button></div>
       <div class="mt"><button class="btn flat" data-action="reset">${tl('Reset progress')}</button></div>
       <p class="center" style="color:var(--muted);font-size:13px;margin-top:20px">${BRAND} · ${TAGLINE} · ${tl('installable as an app')}</p>`));
+  }
+  // Feedback / bug report → Supabase `feedback` table; queues locally if it isn't set up yet.
+  function openFeedback() {
+    $('#modal').removeAttribute('hidden');
+    $('#modal-body').innerHTML = `<h2>💬 Feedback / report a bug</h2>
+      <p>Hit a bug or have an idea? Tell us — it goes straight to the developer.</p>
+      <textarea id="fbText" class="tinput" style="height:120px;text-align:left;font-size:14px" placeholder="What happened, or what would you like to see?"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" data-action="feedback-send">Send</button>
+        <button class="btn sm flat" data-action="close-modal">Cancel</button></div>
+      <p class="note" style="margin-top:8px">Sent with your app language & version so we can reproduce it. No personal info.</p>`;
+    setTimeout(() => { const t = $('#fbText'); if (t) t.focus(); }, 50);
+  }
+  async function sendFeedback() {
+    const t = $('#fbText'); const text = (t && t.value || '').trim();
+    if (!text) { toast('Type something first 🙂'); return; }
+    $('#modal').setAttribute('hidden', '');
+    const item = { reporter: sbUid(), text: text.slice(0, 2000), course: S.courseId, ua: (navigator.userAgent || '').slice(0, 300) };
+    try {
+      const r = await fetch(SB_URL + '/rest/v1/feedback', { method: 'POST', headers: sbH(CLOUD.session && CLOUD.session.access_token), body: JSON.stringify(item) });
+      if (r.ok) { toast('🙏 Thanks — feedback sent!'); return; }
+    } catch {}
+    S.fbQueue = S.fbQueue || []; S.fbQueue.push(item); persist();   // retry on a later boot
+    toast('🙏 Thanks — saved; it’ll send once feedback is enabled.');
+  }
+  async function flushFeedback() {
+    if (!sbUid() || !(S.fbQueue && S.fbQueue.length)) return;
+    for (const item of S.fbQueue.slice()) {
+      try {
+        const r = await fetch(SB_URL + '/rest/v1/feedback', { method: 'POST', headers: sbH(CLOUD.session.access_token), body: JSON.stringify(item) });
+        if (!r.ok) break;
+        S.fbQueue = S.fbQueue.filter(x => x !== item); persist();
+      } catch { break; }
+    }
   }
   // Celebration gallery (Me tab) — replay any animation on demand.
   const CELE_GALLERY = [
     ['firstflight', '🐣 First Flight'], ['library', '📚 The Library'], ['rainy', '🌧️ Rainy Window'], ['duel', '🌸 The Duel'],
     ['party', '🎉 Party'], ['fireworks', '🎆 Fireworks'], ['trophy', '🏆 Trophy'], ['highfive', '🙌 High five'],
     ['confetti', '🎊 Confetti'], ['fly', '🦸 Superhero'], ['night', '🌙 Night watch'], ['mj', '🕺 Moonwalk'],
-    ['genius', '💡 Genius'], ['frozen', '🥶 Frozen'],
+    ['genius', '🧐 Thinker'], ['samurai', '⚔️ Samurai'], ['frozen', '🥶 Frozen'],
   ];
   function showCele(v) {
     const c = course();
@@ -1876,7 +1966,7 @@
       case 'create-challenge': createChallenge(); break;
       case 'join-challenge': joinChallenge(); break;
       case 'join-go': { const t = $('#joinCode'); const raw = (t && t.value || '').trim(); $('#modal').setAttribute('hidden', ''); if (raw) playJoinedCode(raw); break; }
-      case 'edit-name': { const n = prompt('Your display name:', S.displayName || ''); if (n != null) { S.displayName = n.trim().slice(0, 18); persist(); renderArena(); renderTop(); sbSync(); } break; }
+      case 'edit-name': { const n = prompt('Your display name:', S.displayName || ''); if (n != null) { const cleaned = cleanName(n); if (!cleaned) { toast('Name can’t be empty'); break; } if (!nameOK(cleaned)) { toast('Please pick a friendlier name 🙂'); break; } S.displayName = cleaned; persist(); renderArena(); renderTop(); sbSync(); } break; }
       case 'copy-mycode': { const ta = $('#myCode'); if (ta) { ta.select(); try { navigator.clipboard.writeText(ta.value); } catch {} document.execCommand && document.execCommand('copy'); toast('Friend code copied'); } break; }
       case 'add-by-code': { const raw = prompt('Paste your friend’s code:'); if (!raw) break; let d; try { d = dec(raw); } catch { toast('Invalid code'); break; } if (!d || d.ww !== 'friend') { toast('Invalid friend code'); break; } if (d.id === (sbUid() || S.myId)) { toast("That's your OWN code 😄 — send it to your friend, paste THEIRS here"); break; } if ((S.friends || []).some(f => f.id === d.id)) { toast('Already friends'); break; } ensureFriends();
         const isCloud = (d.id || '').length > 20;
@@ -1906,6 +1996,9 @@
       case 'toggle-sound': S.sound = S.sound === false ? true : false; persist(); renderProfile(); if (S.sound) sfx('good'); break;
       case 'play-cele': showCele(a.cele); break;
       case 'cele-close': $('#lesson').classList.add('hidden'); go('me'); break;
+      case 'toggle-lb': window.__lbOpen = !window.__lbOpen; renderArena(); break;
+      case 'feedback': openFeedback(); break;
+      case 'feedback-send': sendFeedback(); break;
       case 'reset': if (confirm('Reset all progress?')) { S = fresh(); ST = null; persist(); applyTheme(); renderTop(); go('learn'); } break;
     }
   });
@@ -1918,7 +2011,30 @@
     if (e.target.id === 'typein') { const b = $('#checkbtn'); if (b) b.disabled = !e.target.value.trim(); }
   });
 
+  /* ---------------- Moderation + weekly reset ---------------- */
+  // Monday-anchored week id, e.g. "2026-07-06", so xp_week resets each new week.
+  function weekKey(d = new Date()) {
+    const t = new Date(d); t.setHours(0, 0, 0, 0);
+    t.setDate(t.getDate() - ((t.getDay() + 6) % 7));   // back to this week's Monday
+    return t.toISOString().slice(0, 10);
+  }
+  // Display-name guard: cap length, and reject slurs/profanity (deterrent, not airtight).
+  // Severe words matched anywhere (catches "shithead", "fuckface"); false-positives rare.
+  const BAD_SUBSTR = ['fuck', 'shit', 'bitch', 'cunt', 'nigger', 'nigga', 'faggot', 'pussy', 'whore', 'slut', 'asshole', 'dickhead', 'motherf', 'wank', 'twat', 'bastard', 'retard', 'jerkoff', 'dildo'];
+  // Common English substrings (class/peacock/shoe) → block only as standalone words.
+  const BAD_TOKEN = ['ass', 'fag', 'hoe', 'cock', 'dick'];
+  function cleanName(raw) { return (raw || '').replace(/\s+/g, ' ').trim().slice(0, 18); }
+  function nameOK(n) {
+    const low = n.toLowerCase();
+    const squashed = low.replace(/[^a-z]/g, '');
+    if (BAD_SUBSTR.some(w => squashed.includes(w))) return false;
+    const tokens = ' ' + low.replace(/[^a-z0-9]+/g, ' ') + ' ';
+    if (BAD_TOKEN.some(w => tokens.includes(' ' + w + ' '))) return false;
+    return true;
+  }
+
   /* ---------------- Boot ---------------- */
+  if (S.weekKey !== weekKey()) { if (S.weekKey) { S.xpWeek = 0; } S.weekKey = weekKey(); }   // new week → weekly XP resets
   if (S.lastDay !== today()) S.lanterns = S.lanternsMax;
   // streak break check: missing a full day resets the streak unless a 🧊 freeze absorbs it
   if (S.lastDay && S.lastDay !== today()) {
@@ -1927,6 +2043,6 @@
   }
   if (!S.myId) S.myId = 'u' + Math.random().toString(36).slice(2, 9);
   applyTheme(); applyUiLang(); renderTop(); go('learn'); persist();
-  sbAuth().then(ok => { if (ok) sbSync(); });
+  sbAuth().then(ok => { if (ok) { sbSync(); flushFeedback(); } });
   window.WW = { go, S };
 })();

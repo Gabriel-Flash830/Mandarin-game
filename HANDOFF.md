@@ -115,7 +115,31 @@ Tests: open `/tests.html` — 226 data checks, keep them green.
    Give click-by-click steps, never Terminal. End every session: commit, test,
    update this file, tell them how to open the app.
 
+## QUEUED (user's list, not yet built — do next)
+1. Arena tab restructure: Leaderboards own tab (weekly XP + global), Friends tab
+   (friends/code/challenge/friends-tournament), Practice tab (bots + quick race,
+   swap into the Tournament slot; user wants "one more thing" TBD). Fix the
+   misaligned "Easy" quick-race button (flex-wrap). Check PHONE view.
+2. Redesign old duo celebrations (party/fireworks/confetti/highfive) — the Lottie
+   crow + emoji mascot float and aren't leveled; rebuild as hand-drawn SVG crows
+   like the storyboards/thinker/samurai.
+3. Study "Alternate" front: let the user PICK the type (char/pinyin/meaning), not
+   random cycling.
+4. Timer/competitive upgrade (needs the 2 match columns — SQL in
+   SUPABASE_HARDENING.md §4).
+User's own to-do: run SUPABASE_HARDENING.md §1–3 (delete test rows incl. Tick*/
+HostQA/GuestQA, tighten matches RLS, create feedback table) BEFORE sharing the URL.
+
 ## DONE THIS SESSION (verified in browser)
+- ✅ Animation fixes (?v=43): genius rebuilt as a Thinker+monocle crow (was a
+  broken temple-tap that poked the eye); superhero mascot moved off the landing
+  spot; moonwalk now faces opposite its glide (scaleX(-1)); NEW `samurai` scene
+  (moon, katana, cherry blossoms) added to the random pool + gallery.
+- ✅ Phase-2 code (?v=41): weekly XP reset (Monday weekKey), name profanity/length
+  filter (nameOK — substring for severe words so "shithead" is caught, word-
+  boundary for common substrings so Cassie/Assassin pass), feedback/bug button
+  (Supabase `feedback` table + local queue), collectibles gallery (S.celeSeen,
+  "X/14 collected"), collapsible global leaderboard with medal rows.
 - ✅ Per-question live ticks (see Supabase bullet above) — 2-account real test.
 - ✅ 4 storyboards First Flight / Library / Rainy Window / Duel — all triggers
   fired via real gameplay; all four scenes screenshotted.
