@@ -568,3 +568,95 @@ button { font-family: inherit; cursor: pointer; }
 @keyframes snowfall { from { transform: translateY(-8px); opacity:1; } to { transform: translateY(160px); opacity:.2; } }
 .fr-breath { animation: breathPuff 2.4s ease-out infinite; }
 @keyframes breathPuff { 0%,55%{opacity:0; transform:scale(.4)} 65%{opacity:.8} 100%{opacity:0; transform:scale(1.6) translateX(10px)} }
+
+/* ================= STORYBOARD SCENES (triggered, never random) ================= */
+.ffScene, .lbScene, .rwScene, .dlScene { animation: nightIn 1s ease both; }
+.ffsvg, .lbsvg, .rwsvg, .dlsvg { width: min(340px, 94%); height: auto; display: block; margin: 0 auto; }
+.ffsvg *, .lbsvg *, .rwsvg *, .dlsvg * { transform-box: fill-box; }
+
+/* ---------- First Flight: chick wobbles in the nest, then takes off ---------- */
+.ff-cloud1 { animation: cloudDrift 24s linear infinite; }
+.ff-cloud2 { animation: cloudDrift 34s linear 4s infinite; }
+.ff-flyer { transform-origin: 50% 100%; animation: ffFly 4.6s ease-in-out infinite; }
+@keyframes ffFly {
+  0% { transform: translate(0,0) scale(1); opacity: 1; }
+  38% { transform: translate(0,2px); }
+  46% { transform: translate(-3px,-6px); }     /* a wobbly first hop */
+  54% { transform: translate(0,3px); }         /* … and back down */
+  64% { transform: translate(2px,-4px); }
+  74% { transform: translate(6px,-14px); }
+  100% { transform: translate(128px,-120px) scale(.64); opacity: 0; }   /* airborne! */
+}
+.ff-wob { transform-origin: 50% 90%; animation: ffWob .5s ease-in-out infinite alternate; }
+@keyframes ffWob { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+.ff-wingF { transform-origin: 90% 50%; animation: ffFlap .16s ease-in-out infinite alternate; }
+.ff-wingB { transform-origin: 10% 50%; animation: ffFlap .16s ease-in-out infinite alternate-reverse; }
+@keyframes ffFlap { from { transform: rotate(20deg); } to { transform: rotate(-26deg); } }
+.ff-head { transform-origin: 50% 90%; animation: ffPeep 1.2s ease-in-out infinite; }
+@keyframes ffPeep { 0%,100% { transform: rotate(0); } 50% { transform: rotate(-8deg); } }
+.ff-feather { animation: ffFeather 3.4s ease-in infinite; }
+.ff-feather.f2 { animation-delay: 1.1s; } .ff-feather.f3 { animation-delay: 2.2s; }
+@keyframes ffFeather {
+  0% { transform: translate(104px,120px) rotate(0); opacity: 0; }
+  10% { opacity: .85; }
+  100% { transform: translate(74px,182px) rotate(240deg); opacity: 0; }
+}
+
+/* ---------- The Library: crow slides a glowing book home, candle + dust motes ---------- */
+.lb-candleglow { animation: lampPulse 2.4s ease-in-out infinite alternate; }
+.lb-flame { transform-origin: 50% 100%; animation: lbFlame .3s ease-in-out infinite alternate; }
+.lb-flame.f2 { animation-duration: .22s; }
+@keyframes lbFlame { from { transform: scaleY(1) translateX(0); } to { transform: scaleY(1.18) translateX(1px); } }
+.lb-book { animation: lbSlide 4s ease-in-out infinite; }
+@keyframes lbSlide {
+  0% { transform: translate(300px,140px); opacity: 0; }
+  12% { opacity: 1; }
+  55% { transform: translate(272px,120px); opacity: 1; }
+  78% { transform: translate(258px,88px); }
+  90%,100% { transform: translate(256px,84px); opacity: 1; }
+}
+.lb-bookglow { animation: lbGlow 2s ease-in-out infinite alternate; }
+@keyframes lbGlow { from { opacity: .15; } to { opacity: .5; } }
+.lb-push { transform-origin: 100% 60%; animation: lbPush 4s ease-in-out infinite; }
+@keyframes lbPush { 0%,30% { transform: rotate(0); } 55% { transform: rotate(-18deg); } 80% { transform: rotate(-6deg); } 100% { transform: rotate(0); } }
+.lb-nod { transform-origin: 50% 90%; animation: lbNod 4s ease-in-out infinite; }
+@keyframes lbNod { 0%,70% { transform: rotate(0); } 82% { transform: rotate(8deg); } 92% { transform: rotate(0); } }
+.lb-mote { animation: lbMote 6s ease-in-out infinite; }
+.lb-mote.m2 { animation-delay: 1.2s; } .lb-mote.m3 { animation-delay: 2.4s; }
+.lb-mote.m4 { animation-delay: 3.6s; } .lb-mote.m5 { animation-delay: 4.8s; }
+@keyframes lbMote { 0% { transform: translate(0,0); opacity: 0; } 20% { opacity: .9; } 80% { opacity: .5; } 100% { transform: translate(8px,-32px); opacity: 0; } }
+
+/* ---------- Rainy Window: rain outside, a lantern, the crow with tea ---------- */
+.rw-rain { animation: rwRain .75s linear infinite; }
+.rw-rain.r2 { animation-duration: 1.05s; }
+@keyframes rwRain { from { transform: translateY(-16px); } to { transform: translateY(30px); } }
+.rw-drop { animation: rwDrop 3.4s ease-in infinite; }
+.rw-drop.d2 { animation-delay: 1.7s; }
+@keyframes rwDrop { 0% { transform: translateY(0); opacity: 0; } 14% { opacity: .8; } 100% { transform: translateY(18px); opacity: 0; } }
+.rw-lampglow { animation: lampPulse 2.6s ease-in-out infinite alternate; }
+.rw-lampflame { transform-origin: 50% 100%; animation: lbFlame .32s ease-in-out infinite alternate; }
+.rw-wisp { animation: rwSteam 2.6s ease-in-out infinite; opacity: 0; }
+.rw-wisp.w2 { animation-delay: 1.1s; }
+@keyframes rwSteam { 0% { transform: translateY(6px) scaleY(.7); opacity: 0; } 30% { opacity: .7; } 100% { transform: translateY(-12px) scaleY(1.1); opacity: 0; } }
+.rw-breathe { transform-origin: 50% 100%; animation: crowBreathe 3s ease-in-out infinite alternate; }
+.rw-lid { transform-origin: 50% 50%; animation: rwBlink 4s linear infinite; }
+@keyframes rwBlink { 0%,92% { transform: scaleY(1); } 96% { transform: scaleY(.1); } 100% { transform: scaleY(1); } }
+
+/* ---------- The Duel: two rooftop crows exchange a bow, cherry petals fall ---------- */
+.dl-bowL { transform-origin: 50% 100%; animation: dlBowL 5s ease-in-out infinite; }
+@keyframes dlBowL { 0%,12% { transform: rotate(0); } 26%,42% { transform: rotate(15deg); } 58%,100% { transform: rotate(0); } }
+.dl-bowR { transform-origin: 50% 100%; animation: dlBowR 5s ease-in-out infinite; }
+@keyframes dlBowR { 0%,20% { transform: rotate(0); } 34%,50% { transform: rotate(-15deg); } 66%,100% { transform: rotate(0); } }
+.dl-band { transform-origin: 0% 50%; animation: dlFlutter 1.4s ease-in-out infinite alternate; }
+.dl-tail { transform-origin: 100% 0%; animation: dlFlutter 1.6s ease-in-out infinite alternate; }
+@keyframes dlFlutter { from { transform: rotate(-4deg); } to { transform: rotate(5deg); } }
+.dl-petal { opacity: 0; }
+.dl-petal.p1 { animation: dlPetalA 4.2s linear infinite; }
+.dl-petal.p4 { animation: dlPetalA 4.8s linear 2.1s infinite; }
+.dl-petal.p2 { animation: dlPetalB 4.5s linear .7s infinite; }
+.dl-petal.p5 { animation: dlPetalB 5.1s linear 2.8s infinite; }
+.dl-petal.p3 { animation: dlPetalC 4s linear 1.4s infinite; }
+.dl-petal.p6 { animation: dlPetalC 4.9s linear 3.3s infinite; }
+@keyframes dlPetalA { 0% { transform: translate(66px,-12px) rotate(0); opacity: 0; } 12% { opacity: .95; } 50% { transform: translate(48px,90px) rotate(150deg); } 90% { opacity: .8; } 100% { transform: translate(74px,196px) rotate(310deg); opacity: 0; } }
+@keyframes dlPetalB { 0% { transform: translate(154px,-12px) rotate(0); opacity: 0; } 12% { opacity: .95; } 50% { transform: translate(172px,90px) rotate(-140deg); } 90% { opacity: .8; } 100% { transform: translate(150px,196px) rotate(-300deg); opacity: 0; } }
+@keyframes dlPetalC { 0% { transform: translate(244px,-12px) rotate(0); opacity: 0; } 12% { opacity: .95; } 50% { transform: translate(226px,90px) rotate(160deg); } 90% { opacity: .8; } 100% { transform: translate(252px,196px) rotate(300deg); opacity: 0; } }

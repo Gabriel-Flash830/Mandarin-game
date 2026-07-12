@@ -476,14 +476,29 @@
     try { await sbSync();   // matches.host has a FK to profiles — ensure ours exists
       const r = await fetch(SB_URL + '/rest/v1/matches', { method: 'POST',
       headers: { ...sbH(CLOUD.session.access_token), Prefer: 'return=representation' },
-      body: JSON.stringify({ host: sbUid(), course: S.courseId, term_ids: termIds, host_score: score, ...(guest ? { guest } : {}) }) });
+      body: JSON.stringify({ host: sbUid(), course: S.courseId, term_ids: termIds, host_score: score == null ? null : encFinal(score), ...(guest ? { guest } : {}) }) });
       const j = await r.json(); return (r.ok && j[0]) ? j[0].id : null; } catch { return null; }
   }
   async function sbAnswerMatch(id, score) {
     if (!sbUid() || !id) return;
     await sbSync();         // matches.guest has a FK to profiles too
     fetch(SB_URL + '/rest/v1/matches?id=eq.' + encodeURIComponent(id), { method: 'PATCH',
-      headers: sbH(CLOUD.session.access_token), body: JSON.stringify({ guest: sbUid(), guest_score: score }) }).catch(() => {});
+      headers: sbH(CLOUD.session.access_token), body: JSON.stringify({ guest: sbUid(), guest_score: encFinal(score) }) }).catch(() => {});
+  }
+  // Live-race score codec (no schema change): while playing, a column holds an
+  // IN-PROGRESS value = questionIndex*10 + score (always < 100 for <=9 Qs);
+  // when finished it holds 100 + finalScore. Readers decode both cases.
+  const encFinal = s => 100 + (s || 0);
+  const encProgress = (qIndex, score) => qIndex * 10 + (score || 0);
+  function decodeScore(v) {                    // null | {done, score, qIndex}
+    if (v == null) return null;
+    if (v >= 100) return { done: true, score: v - 100, qIndex: null };
+    return { done: false, score: v % 10, qIndex: Math.floor(v / 10) };
+  }
+  function oppCellText(live) {                  // opponent VS-card / tick label
+    if (!live) return '…';                      // hasn't started yet
+    if (live.done) return String(live.score);
+    return 'Q' + (live.qIndex + 1) + ' · ' + live.score + 'pt' + (live.score === 1 ? '' : 's');
   }
 
   /* ---- tiny sound effects (Web Audio, no assets) + haptics ---- */
@@ -608,6 +623,15 @@
     $('#lesson').classList.remove('hidden'); renderStep();
   }
   function exitLesson() { $('#lesson').classList.add('hidden'); L = null; go('learn'); }
+  // Rainy Window: shown at boot when a 🧊 freeze absorbed a missed day.
+  function showStreakSaved() {
+    const c = course();
+    $('#lesson').classList.remove('hidden');
+    $('#lesson').innerHTML = `<div class="lesson"><div class="complete">
+      ${celebrate(c.mascot, null, 'rainy')}
+      <p class="center" style="color:var(--muted)">A 🧊 streak freeze kept your <b>${S.streak}</b>-day streak alive. Warm and dry — pick up right where you left off.</p>
+      <div class="mt"><button class="btn" data-action="lesson-quit">Continue</button></div></div></div>`;
+  }
 
   function renderStep() {
     const step = L.queue[L.idx];
@@ -904,6 +928,141 @@
       </g>
     </g>
   </svg>`;
+  // STORYBOARD SCENES — hand-built SVG+CSS (never raw Lottie), one per trigger.
+  // First Flight: nest on a branch, chick wobbles, frantic flaps, first flight.
+  const FF_SVG = `<svg viewBox="0 0 340 190" class="ffsvg" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="ffsky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd9a0"/><stop offset=".55" stop-color="#ffe9c4"/><stop offset="1" stop-color="#fff6e3"/></linearGradient></defs>
+    <rect width="340" height="190" rx="14" fill="url(#ffsky)"/>
+    <circle cx="286" cy="40" r="22" fill="#ffb347" opacity=".9"/><circle cx="286" cy="40" r="30" fill="#ffb347" opacity=".25"/>
+    <g class="ff-cloud1" opacity=".8"><ellipse cx="60" cy="36" rx="30" ry="8" fill="#fff"/><ellipse cx="82" cy="31" rx="18" ry="6" fill="#fff"/></g>
+    <g class="ff-cloud2" opacity=".6"><ellipse cx="180" cy="60" rx="26" ry="7" fill="#fff"/></g>
+    <path d="M-4 170 C40 138 80 150 112 158 C100 166 60 176 -4 188 Z" fill="#6b4a2f"/>
+    <path d="M-4 176 C50 152 96 158 128 166 L128 172 C80 178 30 184 -4 190 Z" fill="#57391f"/>
+    <g class="ff-leaves" fill="#7fae5a"><ellipse cx="30" cy="140" rx="16" ry="8" transform="rotate(-18 30 140)"/><ellipse cx="66" cy="146" rx="14" ry="7" transform="rotate(-8 66 146)"/><ellipse cx="14" cy="156" rx="12" ry="7"/></g>
+    <g class="ff-nest"><path d="M84 154 C84 168 122 168 122 154 C122 148 116 144 103 144 C90 144 84 148 84 154 Z" fill="#8a6236"/>
+      <path d="M86 152 C96 156 110 156 120 152" stroke="#5f3f1d" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M88 158 C98 162 108 162 118 158" stroke="#6d4a24" stroke-width="3" fill="none" stroke-linecap="round"/></g>
+    <g class="ff-feather f1"><path d="M0 0 C4 4 4 10 0 14 C-4 10 -4 4 0 0 Z" fill="#2b3742"/></g>
+    <g class="ff-feather f2"><path d="M0 0 C3 3 3 8 0 11 C-3 8 -3 3 0 0 Z" fill="#3b4956"/></g>
+    <g class="ff-feather f3"><path d="M0 0 C3 3 3 8 0 11 C-3 8 -3 3 0 0 Z" fill="#2b3742"/></g>
+    <g class="ff-flyer">
+      <g class="ff-wob">
+        <g class="ff-wingF"><path d="M96 128 C84 120 72 120 62 128 C72 136 84 138 96 132 Z" fill="#0f151b"/></g>
+        <ellipse cx="103" cy="128" rx="13" ry="16" fill="#161d24"/>
+        <path d="M96 146 L100 152 L104 146 Z" fill="#161d24"/>
+        <g class="ff-head">
+          <circle cx="108" cy="112" r="10.5" fill="#161d24"/>
+          <path d="M117 110 L129 113 L117 117 Z" fill="#f4c542"/>
+          <circle cx="111" cy="109" r="3.4" fill="#fff"/><circle cx="112" cy="109.5" r="1.7" fill="#20303e"/>
+          <path d="M101 103 C104 99 110 98 113 100 C110 101 106 103 104 106 Z" fill="#0d1319"/>
+        </g>
+        <g class="ff-wingB"><path d="M108 128 C120 120 132 120 142 128 C132 136 120 138 108 132 Z" fill="#0a0f14"/></g>
+      </g>
+    </g>
+  </svg>`;
+  // The Library: candle-lit shelves, the crow slides a glowing book home, dust motes.
+  const LB_SVG = `<svg viewBox="0 0 340 190" class="lbsvg" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="lbwall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a1c12"/><stop offset="1" stop-color="#3a2818"/></linearGradient>
+      <radialGradient id="lbglow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffd27a" stop-opacity=".55"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient></defs>
+    <rect width="340" height="190" rx="14" fill="url(#lbwall)"/>
+    <g fill="#20140b"><rect x="18" y="18" width="130" height="10" rx="2"/><rect x="18" y="70" width="130" height="10" rx="2"/><rect x="18" y="122" width="130" height="10" rx="2"/>
+      <rect x="192" y="18" width="130" height="10" rx="2"/><rect x="192" y="70" width="130" height="10" rx="2"/><rect x="192" y="122" width="130" height="10" rx="2"/></g>
+    <g><rect x="24" y="30" width="10" height="40" fill="#8a4b3a"/><rect x="36" y="34" width="9" height="36" fill="#4a6741"/><rect x="47" y="30" width="11" height="40" fill="#3d5a80"/><rect x="60" y="36" width="8" height="34" fill="#9a7b4f"/><rect x="70" y="30" width="10" height="40" fill="#6d3f5b"/><rect x="82" y="34" width="9" height="36" fill="#8a4b3a"/><rect x="93" y="30" width="10" height="40" fill="#4a6741"/><rect x="105" y="36" width="9" height="34" fill="#3d5a80"/><rect x="116" y="30" width="10" height="40" fill="#9a7b4f"/><rect x="128" y="34" width="9" height="36" fill="#6d3f5b"/></g>
+    <g><rect x="198" y="30" width="10" height="40" fill="#4a6741"/><rect x="210" y="34" width="9" height="36" fill="#6d3f5b"/><rect x="221" y="30" width="11" height="40" fill="#9a7b4f"/><rect x="234" y="36" width="8" height="34" fill="#8a4b3a"/><rect x="244" y="30" width="10" height="40" fill="#3d5a80"/><rect x="256" y="34" width="9" height="36" fill="#4a6741"/><rect x="267" y="30" width="10" height="40" fill="#6d3f5b"/><rect x="279" y="36" width="9" height="34" fill="#9a7b4f"/><rect x="290" y="30" width="10" height="40" fill="#8a4b3a"/><rect x="302" y="34" width="9" height="36" fill="#3d5a80"/></g>
+    <g><rect x="24" y="82" width="10" height="40" fill="#3d5a80"/><rect x="36" y="86" width="9" height="36" fill="#9a7b4f"/><rect x="47" y="82" width="11" height="40" fill="#8a4b3a"/><rect x="60" y="88" width="8" height="34" fill="#6d3f5b"/><rect x="70" y="82" width="10" height="40" fill="#4a6741"/><rect x="82" y="86" width="9" height="36" fill="#3d5a80"/></g>
+    <g><rect x="198" y="82" width="10" height="40" fill="#8a4b3a"/><rect x="210" y="86" width="9" height="36" fill="#4a6741"/><rect x="221" y="82" width="11" height="40" fill="#6d3f5b"/><rect x="234" y="88" width="8" height="34" fill="#3d5a80"/><rect x="244" y="82" width="10" height="40" fill="#9a7b4f"/><rect x="270" y="82" width="10" height="40" fill="#4a6741"/><rect x="282" y="86" width="9" height="36" fill="#8a4b3a"/></g>
+    <circle class="lb-candleglow" cx="170" cy="52" r="34" fill="url(#lbglow)"/>
+    <g><rect x="165" y="52" width="10" height="18" rx="3" fill="#e8dcc8"/><path class="lb-flame" d="M170 38 C174 44 174 48 170 51 C166 48 166 44 170 38 Z" fill="#ffb347"/><path class="lb-flame f2" d="M170 42 C172 45 172 48 170 50 C168 48 168 45 170 42 Z" fill="#ffe08a"/></g>
+    <g class="lb-motes" fill="#ffd27a"><circle class="lb-mote m1" cx="120" cy="80" r="1.6"/><circle class="lb-mote m2" cx="200" cy="100" r="1.3"/><circle class="lb-mote m3" cx="150" cy="120" r="1.1"/><circle class="lb-mote m4" cx="230" cy="70" r="1.4"/><circle class="lb-mote m5" cx="90" cy="105" r="1.2"/></g>
+    <rect y="176" width="340" height="14" rx="6" fill="#1a0f07"/>
+    <g class="lb-book"><rect x="0" y="0" width="12" height="40" rx="2" fill="#c9a227"/><rect x="2" y="4" width="8" height="6" fill="#fff3cf"/><rect class="lb-bookglow" x="-4" y="-4" width="20" height="48" rx="4" fill="#ffd27a" opacity=".35"/></g>
+    <g class="lb-crow">
+      <ellipse cx="262" cy="150" rx="16" ry="21" fill="#12181f"/>
+      <path d="M254 168 L258 176 L263 168 Z" fill="#12181f"/>
+      <rect x="252" y="168" width="5" height="9" rx="2" fill="#f4c542"/><rect x="262" y="168" width="5" height="9" rx="2" fill="#f4c542"/>
+      <g class="lb-push"><path d="M252 138 C240 128 228 126 218 132 C228 142 240 146 252 144 Z" fill="#0d1319"/></g>
+      <g class="lb-nod">
+        <circle cx="252" cy="124" r="12.5" fill="#12181f"/>
+        <path d="M241 121 L228 125 L241 129 Z" fill="#f4c542"/>
+        <circle cx="247" cy="121" r="3.8" fill="#fff"/><circle cx="246" cy="121.5" r="1.9" fill="#20303e"/>
+        <path class="lb-specs" d="M240 118 a5 5 0 1 0 10 0 a5 5 0 1 0 -10 0" fill="none" stroke="#c9a227" stroke-width="1.4"/>
+      </g>
+    </g>
+  </svg>`;
+  // Rainy Window: rain outside, one lantern, the crow warms up with tea inside.
+  const RW_SVG = `<svg viewBox="0 0 340 190" class="rwsvg" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="rwout" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16213a"/><stop offset="1" stop-color="#233150"/></linearGradient>
+      <radialGradient id="rwlamp" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffc46b" stop-opacity=".6"/><stop offset="1" stop-color="#ffc46b" stop-opacity="0"/></radialGradient></defs>
+    <rect width="340" height="190" rx="14" fill="#4a3423"/>
+    <rect x="26" y="18" width="180" height="126" rx="8" fill="url(#rwout)"/>
+    <g stroke="#8fa8d9" stroke-width="1.6" stroke-linecap="round" opacity=".75">
+      <g class="rw-rain r1"><line x1="46" y1="20" x2="42" y2="34"/><line x1="86" y1="26" x2="82" y2="40"/><line x1="126" y1="18" x2="122" y2="32"/><line x1="166" y1="24" x2="162" y2="38"/><line x1="66" y1="60" x2="62" y2="74"/><line x1="106" y1="66" x2="102" y2="80"/><line x1="146" y1="58" x2="142" y2="72"/><line x1="186" y1="64" x2="182" y2="78"/></g>
+      <g class="rw-rain r2" opacity=".55"><line x1="56" y1="40" x2="52" y2="54"/><line x1="96" y1="46" x2="92" y2="60"/><line x1="136" y1="38" x2="132" y2="52"/><line x1="176" y1="44" x2="172" y2="58"/><line x1="76" y1="86" x2="72" y2="100"/><line x1="116" y1="92" x2="112" y2="106"/><line x1="156" y1="84" x2="152" y2="98"/></g>
+    </g>
+    <g class="rw-drop d1"><circle cx="60" cy="120" r="2" fill="#8fa8d9" opacity=".8"/></g>
+    <g class="rw-drop d2"><circle cx="130" cy="110" r="1.7" fill="#8fa8d9" opacity=".8"/></g>
+    <rect x="26" y="18" width="180" height="126" rx="8" fill="none" stroke="#2e1f12" stroke-width="8"/>
+    <rect x="112" y="18" width="7" height="126" fill="#2e1f12"/><rect x="26" y="76" width="180" height="7" fill="#2e1f12"/>
+    <rect x="18" y="140" width="196" height="12" rx="4" fill="#33241a"/>
+    <circle class="rw-lampglow" cx="262" cy="70" r="42" fill="url(#rwlamp)"/>
+    <g><rect x="258" y="34" width="8" height="10" fill="#6d4a24"/><path d="M250 44 L274 44 L270 84 L254 84 Z" fill="#b3452c"/><rect x="252" y="58" width="20" height="3" fill="#7d2f1d"/><circle class="rw-lampflame" cx="262" cy="66" r="6" fill="#ffd27a"/></g>
+    <g class="rw-steam" stroke="#e8dcc8" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".7">
+      <path class="rw-wisp w1" d="M300 128 C296 120 304 116 300 108"/>
+      <path class="rw-wisp w2" d="M310 128 C306 118 314 114 310 104"/>
+    </g>
+    <g><path d="M288 132 L322 132 L317 152 L293 152 Z" fill="#7ea8be"/><path d="M322 136 C330 136 330 146 321 146" fill="none" stroke="#7ea8be" stroke-width="4"/><ellipse cx="305" cy="132" rx="17" ry="3.4" fill="#5d8aa0"/></g>
+    <g class="rw-crow">
+      <ellipse cx="248" cy="150" rx="19" ry="24" fill="#12181f"/>
+      <path d="M236 166 C230 172 230 178 236 182 L262 182 C268 178 268 172 262 166 Z" fill="#8a2f2f"/>
+      <path class="rw-wing" d="M262 140 C274 134 284 136 290 144 C282 152 270 154 260 150 Z" fill="#0d1319"/>
+      <g class="rw-breathe">
+        <circle cx="240" cy="120" r="14.5" fill="#12181f"/>
+        <path d="M228 117 L213 121 L228 126 Z" fill="#f4c542"/>
+        <circle cx="235" cy="117" r="4.2" fill="#fff"/><circle class="rw-lid" cx="234" cy="117.5" r="2.1" fill="#20303e"/>
+        <path d="M232 132 C238 136 246 136 252 133 L252 140 C245 143 238 143 232 140 Z" fill="#b3452c"/>
+      </g>
+    </g>
+  </svg>`;
+  // The Duel: rooftop silhouettes at dusk, cherry-blossom petals, a bow of respect.
+  const DL_SVG = `<svg viewBox="0 0 340 190" class="dlsvg" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="dlsky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a1f3d"/><stop offset=".6" stop-color="#7a2e4a"/><stop offset="1" stop-color="#c75146"/></linearGradient></defs>
+    <rect width="340" height="190" rx="14" fill="url(#dlsky)"/>
+    <circle cx="170" cy="74" r="34" fill="#ffe3c2" opacity=".92"/>
+    <g fill="#1d1226">
+      <path d="M-4 130 L30 130 L38 118 L46 130 L86 130 L86 190 L-4 190 Z"/>
+      <path d="M254 130 L294 130 L302 118 L310 130 L344 130 L344 190 L254 190 Z"/>
+      <path d="M20 130 C10 122 6 116 4 108 L14 114 L12 104 L24 112 L24 104 L34 114 C32 120 28 126 24 130 Z" opacity=".9"/>
+    </g>
+    <g fill="#140b1c"><rect x="86" y="150" width="168" height="40"/><path d="M70 150 L270 150 L258 138 L82 138 Z"/><path d="M60 150 C70 146 76 142 82 138 L86 150 Z"/><path d="M280 150 C270 146 264 142 258 138 L254 150 Z"/></g>
+    <g class="dl-petals" fill="#f6b8c5">
+      <ellipse class="dl-petal p1" cx="0" cy="0" rx="3.4" ry="2"/><ellipse class="dl-petal p2" cx="0" cy="0" rx="3" ry="1.8"/>
+      <ellipse class="dl-petal p3" cx="0" cy="0" rx="3.6" ry="2.1"/><ellipse class="dl-petal p4" cx="0" cy="0" rx="2.8" ry="1.7"/>
+      <ellipse class="dl-petal p5" cx="0" cy="0" rx="3.2" ry="1.9"/><ellipse class="dl-petal p6" cx="0" cy="0" rx="3" ry="1.8"/>
+    </g>
+    <g class="dl-crow">
+      <g class="dl-bowL">
+        <ellipse cx="128" cy="128" rx="15" ry="20" fill="#0d0812"/>
+        <path d="M120 144 L124 152 L129 144 Z" fill="#0d0812"/>
+        <circle cx="136" cy="106" r="11.5" fill="#0d0812"/>
+        <path d="M146 104 L158 107 L146 111 Z" fill="#c98a2e"/>
+        <path class="dl-band" d="M126 100 L146 102 L146 106 L126 104 Z" fill="#b3452c"/>
+      </g>
+    </g>
+    <g class="dl-boss">
+      <g class="dl-bowR">
+        <ellipse cx="212" cy="126" rx="17" ry="22" fill="#0d0812"/>
+        <path d="M204 144 L209 152 L214 144 Z" fill="#0d0812"/>
+        <circle cx="203" cy="102" r="12.5" fill="#0d0812"/>
+        <path d="M192 100 L180 104 L192 108 Z" fill="#c98a2e"/>
+        <path d="M210 90 C216 84 224 84 228 88 C222 90 216 94 214 98 Z" fill="#0d0812"/>
+        <path class="dl-tail" d="M226 138 C240 132 248 120 246 106 C238 114 230 122 224 130 Z" fill="#08040c"/>
+      </g>
+    </g>
+  </svg>`;
   // Celebration crow: the user's animated Lottie crow (vendored offline in
   // lottie/), with emoji fallback if the player didn't load.
   let CROW_ANIM = null;   // preloaded so the crow can never fail to appear
@@ -923,8 +1082,11 @@
 
   // Staged duo celebrations: entrance → performance → sparkle. The crow and
   // the language's animal run in, land with squash-&-stretch, and perform.
-  function celebrate(mascot, acc) {
-    const v = (acc != null && acc < 60) ? 'frozen' : sample(['party', 'fireworks', 'trophy', 'highfive', 'fly', 'confetti', 'night', 'mj', 'genius'], 1)[0];
+  function celebrate(mascot, acc, forced) {
+    // forced = storyboard variant tied to a specific trigger (never random):
+    // 'firstflight' first-ever lesson · 'library' unit mastered ·
+    // 'rainy' streak saved by a freeze · 'duel' final boss beaten
+    const v = forced || ((acc != null && acc < 60) ? 'frozen' : sample(['party', 'fireworks', 'trophy', 'highfive', 'fly', 'confetti', 'night', 'mj', 'genius'], 1)[0]);
     const pal = `<span class="pal">${mascot}</span>`;
     const conf = Array.from({ length: 18 }, (_, i) =>
       `<span class="conf" style="left:${3 + i * 5.4}%;animation-delay:${(i % 9) * 0.12}s;font-size:${16 + (i % 3) * 5}px">${['🎉', '⭐', '✨', '🟡', '🔴', '🔵', '🟣', '💛', '🎊'][i % 9]}</span>`).join('');
@@ -950,18 +1112,30 @@
       mj: `<div class="cstage"><span class="disco">🪩</span>${notes}<div class="mjw">${MJ_SVG}</div><span class="spotL"></span><span class="spotR"></span></div>`,
       genius: `<div class="cstage"><div class="thw">${TAP_SVG}</div><span class="th-bulb">💡</span></div>`,
       frozen: `<div class="cstage"><div class="frw">${FROZEN_SVG}</div></div>`,
+      firstflight: `<div class="cstage ffScene">${FF_SVG}</div>`,
+      library: `<div class="cstage lbScene">${LB_SVG}</div>`,
+      rainy: `<div class="cstage rwScene">${RW_SVG}</div>`,
+      duel: `<div class="cstage dlScene">${DL_SVG}</div>`,
     };
     const titles = {
       party: '🎉 You crushed it!', fireworks: '🎆 Spectacular!', trophy: '🏆 Champion run!',
       highfive: '🙌 Nailed it together!', fly: '🦸 Superhero landing!', night: '🌙 Night watch — the city can rest.', mj: '🕺 Moonwalk master!', genius: "☝️ Can't forget what you've mastered.", frozen: '🥶 B-b-brrr… a chilly one. Warm up in Study!', confetti: 'You nailed it!',
+      firstflight: '🐣 First flight — you’re airborne!', library: '📚 Unit mastered — shelved for good.',
+      rainy: '🌧️ Streak saved — warm and dry inside.', duel: '🌸 The last boss bows. Respect.',
     };
     return `<div class="celebrate ${v}">${stages[v]}<h1 class="cmaster">${titles[v]}</h1></div>`;
   }
   function completeLesson() {
     sfx('win');
     const lesson = L.lesson, firstTime = !S.done[lesson.id], c = course();
+    const firstEver = !S.ffSeen && Object.keys(S.done).length === 0;   // very first lesson, once per player
     const gainXP = 10 + L.bestCombo * 2 + (L.mistakes === 0 ? 5 : 0);
     S.done[lesson.id] = Math.max(S.done[lesson.id] || 0, L.mistakes === 0 ? 3 : L.mistakes <= 2 ? 2 : 1);
+    // storyboard triggers: First Flight beats The Library; both beat the random pick
+    const unit = c.units.find(u => u.lessons.some(l => l.id === lesson.id));
+    const unitMastered = firstTime && unit && unit.lessons.every(l => S.done[l.id]);
+    const forced = firstEver ? 'firstflight' : unitMastered ? 'library' : null;
+    if (firstEver) S.ffSeen = 1;
     S.xp += gainXP; S.xpWeek += gainXP; if (firstTime) S.gems += 5;
     S.lanterns = S.lanternsMax;
     if (S.lastDay !== today()) { S.streak += 1; S.lastDay = today(); }
@@ -972,9 +1146,9 @@
     const cardHtml = newCards.length
       ? `<div class="mt"><div style="font-weight:800;color:var(--plum-d)">✨ New word card${newCards.length > 1 ? 's' : ''}!</div>
          <div class="card-grid" style="max-width:340px;margin:10px auto 0;padding:0">${newCards.map(t => glyphCard(t, true).outerHTML).join('')}</div></div>` : '';
-    // celebratory animation (random variant, themed to the language mascot)
+    // celebratory animation (storyboard variant if a trigger fired, else random)
     $('#lesson').innerHTML = `<div class="lesson"><div class="complete">
-      ${celebrate(c.mascot, Math.round(100 * (L.queue.length - L.mistakes) / L.queue.length))}
+      ${celebrate(c.mascot, Math.round(100 * (L.queue.length - L.mistakes) / L.queue.length), forced)}
       <div class="reward-row">
         <div class="reward"><div class="rk">XP</div><div class="rv">+${gainXP}</div></div>
         <div class="reward"><div class="rk">Top combo</div><div class="rv">${L.bestCombo}🔥</div></div>
@@ -1264,10 +1438,11 @@
     if (won) { S.wins = (S.wins || 0) + 1; beatenSet()[B.rv.id] = true; const reward = B.tier.label === 'Easy' ? 12 : B.tier.label === 'Medium' ? 20 : 30; S.gems += reward; S.xp += reward; S.xpWeek += reward; bumpLeague(); }
     persist(); renderTop();
     const c = course();
+    const rivals = c.rivals, finalBoss = won && rivals.length && B.rv.id === rivals[rivals.length - 1].id;
     $('#lesson').innerHTML = `<div class="lesson"><div class="complete">
-      <div class="big">${won ? '🏆' : '🙂'}</div>
-      <h1 style="color:${won ? 'var(--gold-d)' : 'var(--muted)'}">${won ? 'You win!' : 'Good try!'}</h1>
-      <p class="center" style="color:var(--muted)">${won ? 'Your recall powered the win.' : 'Study these words, then come back stronger.'}</p>
+      ${finalBoss ? celebrate(c.mascot, null, 'duel') : `<div class="big">${won ? '🏆' : '🙂'}</div>
+      <h1 style="color:${won ? 'var(--gold-d)' : 'var(--muted)'}">${won ? 'You win!' : 'Good try!'}</h1>`}
+      <p class="center" style="color:var(--muted)">${finalBoss ? 'You beat the last boss on the ladder — the whole rooftop bows.' : won ? 'Your recall powered the win.' : 'Study these words, then come back stronger.'}</p>
       <div class="mt"><button class="btn" data-action="battle-quit">Back to Arena</button></div>
       ${!won ? '<div class="mt"><button class="btn ghost" data-action="study-from-battle">Go study</button></div>' : ''}</div></div>`;
     B = null;
@@ -1275,23 +1450,52 @@
 
   /* ---------------- QUIZ RACE (used by tournament) ---------------- */
   let Q = null;
-  function quizRace(opp, onDone, presetTerms) {
+  function quizRace(opp, onDone, presetTerms, live) {
     const pool = battlePool();
     const base = presetTerms && presetTerms.length ? presetTerms : sample(pool, 5);
     const qs = base.map(t => ({ term: t, options: shuffle([t, ...distractors(t, 3)]) }));
-    Q = { qs, idx: 0, me: 0, bot: 0, opp, onDone, locked: false, fixed: (opp && opp.fixedScore != null) ? opp.fixedScore : null, plan: (() => { const p = qs.map(() => Math.random() < ((opp && opp.skill) || 0.45)); if (!p.some(Boolean)) p[Math.floor(Math.random() * p.length)] = true; return p; })() };
+    Q = { qs, idx: 0, me: 0, bot: 0, opp, onDone, locked: false, fixed: (opp && opp.fixedScore != null) ? opp.fixedScore : null, live: live || null, oppLive: null, pollIv: null, plan: (() => { const p = qs.map(() => Math.random() < ((opp && opp.skill) || 0.45)); if (!p.some(Boolean)) p[Math.floor(Math.random() * p.length)] = true; return p; })() };
     $('#lesson').classList.remove('hidden'); renderQuiz();
   }
+  // --- live-race helpers: patch my column, poll the opponent's, tick the card ---
+  function qLivePatch(finished) {
+    if (!Q || !Q.live) return;
+    sbPatchMatch(Q.live.mid, { [Q.live.mine]: finished ? encFinal(Q.me) : encProgress(Q.idx, Q.me) });
+  }
+  function qUpdateOppCell() {
+    const el = document.getElementById('opp-score');
+    if (el && Q && Q.live) el.textContent = oppCellText(Q.oppLive);
+  }
+  function qStartPoll() {
+    if (!Q || !Q.live || Q.pollIv) return;
+    const tick = async () => {
+      if (!Q || !Q.live) return;
+      try {
+        const r = await fetch(SB_URL + '/rest/v1/matches?id=eq.' + Q.live.mid + '&select=' + Q.live.opp, { headers: sbH(CLOUD.session.access_token) });
+        const row = (await r.json())[0];
+        if (row) { Q.oppLive = decodeScore(row[Q.live.opp]); qUpdateOppCell(); }
+      } catch {}
+    };
+    tick();                                   // immediate first read
+    Q.pollIv = setInterval(tick, 2000);       // then every 2s
+  }
+  function qStopPoll() { if (Q && Q.pollIv) { clearInterval(Q.pollIv); Q.pollIv = null; } }
   function renderQuiz() {
-    if (Q.idx >= Q.qs.length) { const bot = Q.fixed != null ? Q.fixed : Q.bot; const won = Q.me > bot; const cb = Q.onDone; $('#lesson').classList.add('hidden'); return cb(won, Q.me, bot); }
+    if (Q.idx >= Q.qs.length) {
+      qStopPoll();
+      if (Q.live) qLivePatch(true);                                   // publish my final = 100 + score
+      const bot = Q.live ? (Q.oppLive && Q.oppLive.done ? Q.oppLive.score : 0) : (Q.fixed != null ? Q.fixed : Q.bot);
+      const won = Q.me > bot; const cb = Q.onDone; $('#lesson').classList.add('hidden'); return cb(won, Q.me, bot);
+    }
     const q = Q.qs[Q.idx];
+    const oppDisp = Q.live ? oppCellText(Q.oppLive) : String(Q.fixed != null ? Q.fixed : Q.bot);
     $('#lesson').innerHTML = `<div class="lesson">
       <div class="lhead"><button class="close" data-action="quiz-quit">✕</button>
-        <div style="flex:1;text-align:center;font-weight:800;color:var(--muted)">Match · You ${Q.me} – ${Q.bot} ${esc(Q.opp.name)}</div></div>
+        <div style="flex:1;text-align:center;font-weight:800;color:var(--muted)">${Q.live ? '🔴 Live race · Q' + (Q.idx + 1) + '/' + Q.qs.length : 'Match · You ' + Q.me + ' – ' + (Q.fixed != null ? Q.fixed : Q.bot) + ' ' + esc(Q.opp.name)}</div></div>
       <div class="versus">
         <div class="vcard"><div class="av">😀</div><div class="nm">You</div><div class="rd" style="font-weight:800;margin-top:6px">${Q.me}</div></div>
         <div class="vs2">VS</div>
-        <div class="vcard"><div class="av">${Q.opp.av}</div><div class="nm">${esc(Q.opp.name)}</div><div class="rd" style="font-weight:800;margin-top:6px">${Q.fixed != null ? Q.fixed : Q.bot}</div></div>
+        <div class="vcard"><div class="av">${Q.opp.av}</div><div class="nm">${esc(Q.opp.name)}</div><div class="rd" id="opp-score" style="font-weight:800;margin-top:6px">${oppDisp}</div></div>
       </div>
       <div class="qbody" style="padding:8px 2px">
         <div class="qtitle center">Quick! What does this mean?</div>
@@ -1299,6 +1503,7 @@
           <div class="bubble">${esc(q.term.term)}${q.term.reading ? `<div class="rd">${esc(q.term.reading)}</div>` : ''}</div></div>
         <div class="choices">${q.options.map((o, i) => `<button class="choice" data-action="quiz-answer" data-idx="${i}">${esc(tm(o.en))}</button>`).join('')}</div>
       </div></div>`;
+    if (Q.live) { qLivePatch(false); qStartPoll(); }                  // publish my progress + watch theirs
     speak(q.term.term);
   }
   function quizAnswer(idx) {
@@ -1306,7 +1511,7 @@
     const q = Q.qs[Q.idx], ok = q.options[idx].id === q.term.id;
     document.querySelectorAll('#lesson .choice').forEach((c, i) => { c.disabled = true; if (q.options[i].id === q.term.id) c.classList.add('right'); else if (i === idx) c.classList.add('wrong'); });
     if (ok) Q.me++;
-    if (Q.fixed == null && Q.plan[Q.idx]) Q.bot++;   // bot's answers are pre-planned by its skill, like bosses
+    if (!Q.live && Q.fixed == null && Q.plan[Q.idx]) Q.bot++;   // bot's answers are pre-planned by its skill, like bosses
     speak(q.term.term);
     setTimeout(() => { Q.idx++; Q.locked = false; renderQuiz(); }, 800);
   }
@@ -1324,46 +1529,57 @@
       headers: sbH(CLOUD.session.access_token), body: JSON.stringify(fields) }).catch(() => {});
   }
   // live race: wait screen that polls until both scores exist, then shows the result
-  function pollResult(mid, mine, opp) {
+  function pollResult(mid, mine, opp) {   // mine = my RAW final score (already published encoded)
     const L = $('#lesson'); L.classList.remove('hidden');
     L.innerHTML = `<div class="lesson"><div class="complete"><div class="big">⏳</div>
       <h1>Waiting for ${esc(opp.name)}…</h1>
       <p class="center" style="color:var(--muted)">You scored <b>${mine}</b>. The result appears the moment they finish.</p>
+      <p class="center" id="opp-live" style="color:var(--muted);font-weight:800;min-height:1.2em"></p>
       <div class="mt"><button class="btn ghost" data-action="quiz-quit">Check later</button></div></div></div>`;
+    const oppCol = opp.iAmGuest ? 'host_score' : 'guest_score';
     let n = 0;
     const iv = setInterval(async () => {
-      if (++n > 40 || L.classList.contains('hidden')) { clearInterval(iv); return; }
+      if (++n > 50 || L.classList.contains('hidden')) { clearInterval(iv); return; }
       try {
         const r = await fetch(SB_URL + '/rest/v1/matches?id=eq.' + mid + '&select=host_score,guest_score', { headers: sbH(CLOUD.session.access_token) });
-        const m = (await r.json())[0];
-        if (m && m.host_score != null && m.guest_score != null) {
+        const m = (await r.json())[0]; if (!m) return;
+        const tl = decodeScore(m[oppCol]);
+        if (tl && tl.done) {
           clearInterval(iv);
-          const theirs = opp.iAmGuest ? m.host_score : m.guest_score;
+          const theirs = tl.score;
           if (mine > theirs) { S.gems += 10; S.xp += 12; S.xpWeek += 12; persist(); renderTop(); }
           showMatchResult(mine > theirs, mine, theirs, opp);
+        } else {
+          const el = document.getElementById('opp-live');
+          if (el) el.textContent = tl ? ('They’re on Q' + (tl.qIndex + 1) + ' · ' + tl.score + 'pt' + (tl.score === 1 ? '' : 's') + '…') : 'Waiting for them to start…';
         }
       } catch {}
-    }, 2500);
+    }, 2000);
   }
   let INBOX = [];
+  // Rows older than this use the raw (pre-tick) score encoding — never show them.
+  const MATCH_EPOCH = '2026-07-12T06:30:00Z';
   function loadInbox() {
     if (!sbUid()) return;
-    fetch(SB_URL + '/rest/v1/matches?select=id,host,term_ids,host_score,course&guest=eq.' + sbUid() + '&guest_score=is.null&order=created_at.desc&limit=5',
+    fetch(SB_URL + '/rest/v1/matches?select=id,host,term_ids,host_score,course,created_at&guest=eq.' + sbUid() + '&or=(guest_score.is.null,guest_score.lt.100)&created_at=gt.' + MATCH_EPOCH + '&order=created_at.desc&limit=5',
       { headers: sbH(CLOUD.session.access_token) })
       .then(r => r.ok ? r.json() : []).then(async ms => {
         INBOX = ms; const d = $('#fr-inbox'); if (!d) return;
-        if (ms.some(m => m.host_score == null)) window.__inboxOpen = true;   // live race → pop open
+        const fresh = m => (Date.now() - Date.parse(m.created_at)) < 30 * 60000;   // abandoned races stop being "LIVE" after 30 min
+        const hostLive = m => { const hs = decodeScore(m.host_score); return (!hs || !hs.done) && fresh(m); };
+        if (ms.some(hostLive)) window.__inboxOpen = true;   // live race → pop open
         const head = `<button class="seg-label" data-action="toggle-inbox" style="background:none;border:none;cursor:pointer;padding:0;display:block">📬 Challenges (${ms.length}) ${window.__inboxOpen ? '▾' : '▸'}</button>`;
         if (!ms.length) { d.innerHTML = head; return; }
         if (!window.__inboxOpen) { d.innerHTML = head; return; }
         const ids = [...new Set(ms.map(m => m.host))]; const names = {};
         try { (await fetch(SB_URL + '/rest/v1/profiles?select=id,name&id=in.(' + ids.join(',') + ')',
           { headers: sbH(CLOUD.session.access_token) }).then(r => r.json())).forEach(p => { names[p.id] = p.name; }); } catch {}
-        d.innerHTML = head + ms.slice(0, 3).map(m =>
-          `<div class="frow"><div class="fav">${m.host_score == null ? '🔴' : '🎯'}</div><div class="fnm">${m.host_score == null
-            ? esc(names[m.host] || 'A friend') + ' — LIVE race, join now!'
-            : esc(names[m.host] || 'A friend') + ' scored ' + m.host_score + '/' + ((m.term_ids || []).length || 5) + ' — beat it!'}</div>
-           <button class="btn sm" data-action="play-inbox" data-id="${m.id}">Play</button></div>`).join('') + (ms.length > 3 ? `<p class="note">…and ${ms.length - 3} more</p>` : '');
+        d.innerHTML = head + ms.slice(0, 3).map(m => {
+          const hs = decodeScore(m.host_score), nm = esc(names[m.host] || 'A friend'), total = (m.term_ids || []).length || 5;
+          return `<div class="frow"><div class="fav">${hostLive(m) ? '🔴' : '🎯'}</div><div class="fnm">${hostLive(m)
+            ? nm + ' — LIVE race, join now!'
+            : nm + ' scored ' + (hs ? hs.score : 0) + '/' + total + ' — beat it!'}</div>
+           <button class="btn sm" data-action="play-inbox" data-id="${m.id}">Play</button></div>`; }).join('') + (ms.length > 3 ? `<p class="note">…and ${ms.length - 3} more</p>` : '');
       }).catch(() => {});
   }
   function challengeFriend(id) {
@@ -1375,9 +1591,10 @@
         const mid = await sbCreateMatch(picks.map(p => p.id), null, f.id);   // created BEFORE playing
         toast('🔴 Live! Tell ' + f.name + ' to open Arena → Friends NOW');
         quizRace({ name: f.name, av: f.av, fixedScore: 0 }, async (won, me) => {
-          if (mid) { await sbPatchMatch(mid, { host_score: me }); pollResult(mid, me, { name: f.name, av: f.av, iAmGuest: false }); }
+          // qLivePatch already published host_score = 100+me on finish
+          if (mid) pollResult(mid, me, { name: f.name, av: f.av, iAmGuest: false });
           else showMatchResult(true, me, 0, f);
-        }, picks);
+        }, picks, mid ? { mid, mine: 'host_score', opp: 'guest_score' } : null);
       })();
       return;
     }
@@ -1623,12 +1840,10 @@
         if (COURSES[m.course]) { S.courseId = m.course; applyTheme(); renderTop(); }
         const terms = allTerms(m.course).filter(t => (m.term_ids || []).includes(t.id));
         if (terms.length < 2) { toast('Could not load that match'); break; }
-        quizRace({ name: 'your friend', av: '🎯', fixedScore: m.host_score || 0 }, async (won, me, bot) => {
-          await sbAnswerMatch(m.id, me);
-          if (m.host_score == null) { pollResult(m.id, me, { name: 'your friend', av: '🎯', iAmGuest: true }); return; }
-          if (won) { S.gems += 10; S.xp += 12; S.xpWeek += 12; persist(); renderTop(); }
-          showMatchResult(won, me, bot, { name: 'your friend', av: '🎯' });
-        }, terms); break; }
+        quizRace({ name: 'your friend', av: '🎯' }, async (won, me) => {
+          await sbAnswerMatch(m.id, me);           // publishes guest_score = 100+me, ensures guest/FK
+          pollResult(m.id, me, { name: 'your friend', av: '🎯', iAmGuest: true });   // resolves instantly if host already done
+        }, terms, { mid: m.id, mine: 'guest_score', opp: 'host_score' }); break; }
       case 'create-challenge': createChallenge(); break;
       case 'join-challenge': joinChallenge(); break;
       case 'join-go': { const t = $('#joinCode'); const raw = (t && t.value || '').trim(); $('#modal').setAttribute('hidden', ''); if (raw) playJoinedCode(raw); break; }
@@ -1644,7 +1859,7 @@
       case 'tourney-play': tourneyPlay(); break;
       case 'reset-tourney': S.tourney = null; persist(); renderArena(); break;
       case 'quiz-answer': quizAnswer(+a.idx); break;
-      case 'quiz-quit': $('#lesson').classList.add('hidden'); Q = null; go('battle'); break;
+      case 'quiz-quit': qStopPoll(); $('#lesson').classList.add('hidden'); Q = null; go('battle'); break;
       case 'start-placement': $('#modal').setAttribute('hidden', ''); startPlacement(); break;
       case 'placement-answer': placementAnswer(+a.idx); break;
       case 'placement-quit': $('#lesson').classList.add('hidden'); P = null; go('learn'); break;
@@ -1677,7 +1892,7 @@
   // streak break check: missing a full day resets the streak unless a 🧊 freeze absorbs it
   if (S.lastDay && S.lastDay !== today()) {
     const gap = Math.round((Date.parse(today()) - Date.parse(S.lastDay)) / 864e5);
-    if (gap > 1) { if ((S.freeze || 0) > 0) { S.freeze--; setTimeout(() => toast('🧊 Streak freeze used — streak saved!'), 600); } else S.streak = 0; }
+    if (gap > 1) { if ((S.freeze || 0) > 0) { S.freeze--; setTimeout(showStreakSaved, 700); } else S.streak = 0; }
   }
   if (!S.myId) S.myId = 'u' + Math.random().toString(36).slice(2, 9);
   applyTheme(); applyUiLang(); renderTop(); go('learn'); persist();

@@ -6,24 +6,46 @@ http://localhost:4173 (phone on same Wi-Fi: http://<mac-ip>:4173, find ip via
 `ipconfig getifaddr en0`). Hard-refresh (Cmd+Shift+R) after code changes.
 Tests: open `/tests.html` — 226 data checks, keep them green.
 
-## State (as of commit 307bd19)
+## State (as of the live-ticks + storyboards ship, assets at ?v=38)
 - **26 languages / 7 regions** in `data/courses.js` (zh=12 units/127 words,
   es=8, fr=7; rest are starter sets). Add words with the `w()` helper.
 - **i18n, 3 layers** in `js/app.js`: `tr()` UI strings (STR), `tl()` labels
   (T2), `tm()` word meanings (MEANINGS/2/3 — all 8 base languages:
   en fr es de pt zh ar hi; ar/he/ur switch to RTL).
-- **8 celebration variants**: party/fireworks/trophy/highfive/confetti use the
+- **12 celebration variants**: party/fireworks/trophy/highfive/confetti use the
   vendored Lottie crow (`lottie/crow.json`, preloaded into CROW_ANIM, emoji
   fallback — can never be blank); `fly`=HERO_SVG superhero landing;
   `night`=NIGHT_SVG (crow's back against lamppost, cape attached);
-  `mj`=MJ_SVG moonwalk (fedora, glove, spin, toe-stand).
+  `mj`=MJ_SVG moonwalk; `genius`=TAP_SVG; `frozen`=FROZEN_SVG (acc<60%).
   New variants: user describes a scene in chat → build as SVG+CSS (never raw
   Lottie JSON). Ornament classes must not collide with variant names (see .cup).
+- **4 storyboard variants (SVG+CSS, TRIGGERED not random)** — `celebrate(mascot,
+  acc, forced)`; the `forced` arg names the variant. All four verified live:
+  `firstflight`=FF_SVG (nest, wobble, flaps, takeoff) fires on the FIRST-EVER
+  lesson (`!S.ffSeen && Object.keys(S.done).length===0`, sets S.ffSeen, one-time);
+  `library`=LB_SVG (candle shelves, crow slides a glowing book home, dust motes)
+  on mastering a unit (last lesson of a unit → all its lessons in S.done);
+  `rainy`=RW_SVG (rain, lantern, crow + tea) via showStreakSaved() at boot when a
+  🧊 freeze absorbs a missed day; `duel`=DL_SVG (rooftop bow, cherry petals, moon)
+  in endBattle when the LAST rival (r11 in zh) is beaten. CSS in styles.css under
+  "STORYBOARD SCENES"; each uses `.xxsvg *{transform-box:fill-box}` like nightScene.
 - **Supabase cloud LIVE** (project rdnkyqzfxnuecnuqerfq, anon key in app.js):
   anonymous auth, profile sync (sbSync — awaited by match fns for FK),
   global weekly top-10 in Arena→Friends, cross-device challenge matches
   (create+claim verified end-to-end). Tables: profiles, friends, matches
   (matches has permissive select/update policies).
+- **LIVE per-question ticks DONE + verified (2 real accounts vs real Supabase).**
+  Score codec (no schema change) in app.js: a match column holds an IN-PROGRESS
+  value `qIndex*10 + score` (always <100 for ≤9 Qs) while playing, and `100 +
+  finalScore` when finished. Helpers: `encFinal`, `encProgress`, `decodeScore`,
+  `oppCellText`. quizRace takes a 4th `live={mid,mine,opp}` arg; qLivePatch writes
+  my column each question + on finish; qStartPoll polls the OPP column every 2s
+  and tickers the VS card ("Q3 · 2pts"); pollResult decodes finals (both ≥100 →
+  compare) and shows the opponent's live progress while waiting. ALL readers
+  decode: loadInbox (query now `or=(guest_score.is.null,guest_score.lt.100)` +
+  `created_at=gt.MATCH_EPOCH` so pre-codec rows never show; 🔴 only for fresh
+  hosts). Host=challengeFriend live branch; Guest=play-inbox. Bot/async-code
+  paths unchanged (encFinal applied at write, decoded at read).
 - Engine: delegated data-action clicks; state in localStorage `wordwisp.v2`;
   lessons (5 exercise types, lantern lives, sfx+haptics); Study decks
   collected/all/weak (Alternate cycles char→py→mean); curriculum-linked boss
@@ -93,18 +115,33 @@ Tests: open `/tests.html` — 226 data checks, keep them green.
    Give click-by-click steps, never Terminal. End every session: commit, test,
    update this file, tell them how to open the app.
 
-## NEXT BUILD SPEC — per-question live ticks (makes races FEEL live)
-Encode progress in the existing score columns (no SQL needed): while playing,
-PATCH your column to (questionIndex*10 + score); on finish PATCH (100 + score).
-Reader: v>=100 → final (v-100); else in-progress. renderQuiz polls the
-opponent column every 2s and shows 'Q3 · 2pts' ticking; pollResult decodes
-finals. Test with two browser profiles BEFORE shipping.
+## DONE THIS SESSION (verified in browser)
+- ✅ Per-question live ticks (see Supabase bullet above) — 2-account real test.
+- ✅ 4 storyboards First Flight / Library / Rainy Window / Duel — all triggers
+  fired via real gameplay; all four scenes screenshotted.
+- Testing note: the in-app browser cached index.html via the SW; had to
+  unregister SW + clear caches to see ?v=38. Production SW is network-first so
+  real users DO get updates, but ALWAYS bump ?v= (done: 37→38).
+
+## NEXT BUILD SPEC — competitive race upgrade (user asked 2026-07-12)
+User wants races to feel like a face-to-face duel, not just 5 Qs:
+1. TIMER + speed tiebreaker: when scores tie (e.g. 5–5), the FASTER finisher
+   wins. Store elapsed ms alongside score. matches has no time column → either
+   add `host_ms`/`guest_ms` (needs the user to run one ALTER TABLE in Supabase),
+   or pack time into the score int (finished = 100 + score, and stash ms in a
+   separate small column is cleaner). RECOMMEND asking the user to add two int
+   columns; show "5/5 · 12.4s — you won on speed!".
+2. Bigger, shared, randomized pool: draw N (7–10) from the whole course, same
+   pool both players, reshuffled each match. (challengeFriend already draws 7
+   from allTerms.) Consider "most correct in a fixed time" as an alt mode.
+Design it carefully; it reopens the score codec. Discuss schema before coding.
 
 ## PRIORITIES (next sessions, in order)
-1. Enable/verify worldwide URL end-to-end (phone install, cloud green).
-2. Phase-2 hardening: clean cloud test rows, tighten matches RLS, weekly XP
-   reset, name moderation — BEFORE sharing the URL publicly.
-3. The 4 storyboards: First Flight, The Library, Rainy Window, The Duel.
+1. Phase-2 hardening: clean cloud test rows (incl. new Tick* rows from this
+   session), tighten matches RLS, weekly XP reset, name length/profanity guard —
+   BEFORE sharing the URL publicly.
+2. Competitive race upgrade (timer/tiebreaker + bigger pool) — spec above.
+3. Fix the user's own testing bug list (ask them what they found).
 4. Real-friend tournaments (use 🟢 friends + matches table) and live realtime
    play (Supabase Realtime).
 5. Cloud save/restore (saves table SQL above), deeper es/fr content.
