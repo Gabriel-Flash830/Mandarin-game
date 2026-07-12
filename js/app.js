@@ -1290,7 +1290,13 @@
     if (!S.displayName) setTimeout(() => toast('👤 Set your name (Edit name) so friends can tell it’s you!'), 600);
     const myCode = enc({ ww: 'friend', n: name, id: sbUid() || S.myId });
     const wrap = el('div', 'pad');
-    const rows = [{ name, av: '😀', xp: S.xpWeek, me: true }, ...S.friends].sort((a, b) => b.xp - a.xp);
+    // Real friends (🟢 cloud, synced XP) compete on the weekly board; bots are practice only.
+    const isReal = f => !!(f.live || (f.id || '').length > 20);
+    const realFriends = (S.friends || []).filter(isReal);
+    const bots = (S.friends || []).filter(f => !isReal(f));
+    const league = [{ name, av: '😀', xp: S.xpWeek, me: true }, ...realFriends].sort((a, b) => b.xp - a.xp);
+    const dLabel = sk => sk < 0.42 ? 'Easy' : sk < 0.58 ? 'Medium' : 'Hard';
+    const dCls = sk => sk < 0.42 ? 'easy' : sk < 0.58 ? 'med' : 'hard';
     wrap.innerHTML = `<div id="fr-inbox"></div><div class="settings-card" style="margin-bottom:14px">
         <div class="seg-label">👤 Your account</div>
         <p class="note" style="margin:4px 0 8px">Name: <b>${esc(name)}</b> — share your friend code so people can add you.</p>
@@ -1300,17 +1306,19 @@
           <button class="btn sm ghost" data-action="edit-name">Edit name</button>
           <button class="btn sm ghost" data-action="add-by-code">＋ Add by code</button>
         </div>
-        <p class="note" style="margin-top:8px">No sign-up: your name lives on this device. Full server accounts (synced friend lists, live presence) are the next step — see README.</p>
       </div>
-      <div class="seg-label">Friend group · weekly XP</div>` +
-      rows.map((r, i) => { const sk = r.skill || 0.45; const dcls = sk < 0.42 ? 'easy' : sk < 0.58 ? 'med' : 'hard'; const dlbl = sk < 0.42 ? 'Easy' : sk < 0.58 ? 'Medium' : 'Hard';
-        return `<div class="frow ${r.me ? 'me' : ''}"><div class="fpos">${i + 1}</div><div class="fav">${r.av}</div>
-        <div class="fnm">${esc(r.name)}${r.live ? ' 🟢' : ''} ${r.me ? '' : `<span class="diff ${dcls}" style="margin-left:6px">${dlbl}</span>`}</div><div class="fxp">${r.xp} XP</div>
-        ${r.me ? '' : `<button class="btn sm" data-action="challenge-friend" data-id="${r.id}" style="padding:6px 10px;margin-right:4px">⚔️</button><button class="frm" data-action="remove-friend" data-id="${r.id}">✕</button>`}</div>`; }).join('') +
-      `<button class="btn sky mt" data-action="add-friend">＋ Add a friend (practice bot)</button>
-       <div class="seg-label" style="margin-top:14px">🤖 Quick bot match</div>
-       <div style="display:flex;gap:8px;margin-top:6px">
-         <button class="btn sm ghost" data-action="bot-race" data-skill="0.25">Easy</button>
+      <div class="seg-label">🏆 Weekly XP — you &amp; your friends</div>
+      ${realFriends.length ? '' : `<p class="note" style="margin:4px 0 10px">Just you so far. Swap friend codes with a real friend (＋ Add by code) — only real friends 🟢 race for weekly XP here. Practice bots don't count and live below.</p>`}` +
+      league.map((r, i) => `<div class="frow ${r.me ? 'me' : ''}"><div class="fpos">${i + 1}</div><div class="fav">${r.av}</div>
+        <div class="fnm">${esc(r.name)}${r.live ? ' 🟢' : ''}</div><div class="fxp">${r.xp} XP</div>
+        ${r.me ? '' : `<button class="btn sm" data-action="challenge-friend" data-id="${r.id}" style="padding:6px 10px;margin-right:4px">⚔️</button><button class="frm" data-action="remove-friend" data-id="${r.id}">✕</button>`}</div>`).join('') +
+      `<div class="seg-label" style="margin-top:18px">🤖 Practice bots — for fun, no XP</div>` +
+      (bots.length ? bots.map(b => `<div class="frow"><div class="fav">${b.av}</div>
+        <div class="fnm">${esc(b.name)} <span class="diff ${dCls(b.skill || 0.45)}" style="margin-left:6px">${dLabel(b.skill || 0.45)}</span></div>
+        <button class="btn sm" data-action="challenge-friend" data-id="${b.id}" style="padding:6px 10px;margin-right:4px">⚔️</button><button class="frm" data-action="remove-friend" data-id="${b.id}">✕</button></div>`).join('') : '') +
+      `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+         <button class="btn sm sky" data-action="add-friend">＋ Add a practice bot</button>
+         <button class="btn sm ghost" data-action="bot-race" data-skill="0.25">Quick race · Easy</button>
          <button class="btn sm ghost" data-action="bot-race" data-skill="0.45">Medium</button>
          <button class="btn sm ghost" data-action="bot-race" data-skill="0.7">Hard</button></div>
        <div class="seg-label" style="margin-top:18px">🌐 Play a real person</div>
@@ -1318,8 +1326,9 @@
          <button class="btn" data-action="create-challenge">Send a challenge</button>
          <button class="btn ghost" data-action="join-challenge">Have a code?</button>
        </div>
-       <div class="seg-label" style="margin-top:18px">🌍 ${tl('Global weekly top 10')}</div><div id="cloud-lb" class="note">${sbUid() ? '…' : tl('Cloud off — see Me tab')}</div>
-       <p class="note">Tap ⚔️ to race a friend now. “Send a challenge” gives you a code to share — your friend plays the same words on their device and the higher score wins (works across devices, no sign-up).</p>`;
+       <div class="seg-label" style="margin-top:18px">🌍 Everyone this week (all players)</div>
+       <div id="cloud-lb" class="note">${sbUid() ? '…' : tl('Cloud off — see Me tab')}</div>
+       <p class="note">🏆 above is you + your friends. 🌍 here is the global top 10 across everyone using WordWisp (real cloud server). Tap ⚔️ to race a friend live; “Send a challenge” makes a code to play across devices.</p>`;
     root.appendChild(wrap);
     const cloudIds = (S.friends || []).filter(f => (f.id || '').length > 20).map(f => f.id);
     if (sbUid() && cloudIds.length) {
@@ -1727,7 +1736,8 @@
   }
 
   /* ---------------- LEAGUE (weekly flavour) ---------------- */
-  function bumpLeague() { ensureFriends(); S.friends.forEach(f => f.xp += rand(0, 4)); persist(); }
+  // Bots don't gain XP (they're practice only); real friends' XP syncs from the cloud.
+  function bumpLeague() { ensureFriends(); }
 
   /* ---------------- PROFILE ---------------- */
   function renderProfile() {
@@ -1768,8 +1778,27 @@
         <p class="note" style="margin-top:8px">Get a key at <b>console.cloud.google.com</b> → enable “Cloud Text-to-Speech API”. Stored only on this device. Restrict the key to that API.</p>
       </div>
 
+      <div class="settings-card mt"><div class="seg-label">🎬 ${tl('Celebrations')}</div>
+        <p class="note" style="margin:4px 0 8px">Every crow moment in one place — tap any to watch it. The four story scenes (🐣📚🌧️🌸) also play automatically when you earn them.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">${CELE_GALLERY.map(([v, label]) =>
+          `<button class="btn sm ghost" data-action="play-cele" data-cele="${v}">${label}</button>`).join('')}</div></div>
+
       <div class="mt"><button class="btn flat" data-action="reset">${tl('Reset progress')}</button></div>
       <p class="center" style="color:var(--muted);font-size:13px;margin-top:20px">${BRAND} · ${TAGLINE} · ${tl('installable as an app')}</p>`));
+  }
+  // Celebration gallery (Me tab) — replay any animation on demand.
+  const CELE_GALLERY = [
+    ['firstflight', '🐣 First Flight'], ['library', '📚 The Library'], ['rainy', '🌧️ Rainy Window'], ['duel', '🌸 The Duel'],
+    ['party', '🎉 Party'], ['fireworks', '🎆 Fireworks'], ['trophy', '🏆 Trophy'], ['highfive', '🙌 High five'],
+    ['confetti', '🎊 Confetti'], ['fly', '🦸 Superhero'], ['night', '🌙 Night watch'], ['mj', '🕺 Moonwalk'],
+    ['genius', '💡 Genius'], ['frozen', '🥶 Frozen'],
+  ];
+  function showCele(v) {
+    const c = course();
+    $('#lesson').classList.remove('hidden');
+    $('#lesson').innerHTML = `<div class="lesson"><div class="complete">
+      ${celebrate(c.mascot, v === 'frozen' ? 10 : null, v)}
+      <div class="mt"><button class="btn" data-action="cele-close">Close</button></div></div></div>`;
   }
 
   /* ---------------- Language picker ---------------- */
@@ -1875,6 +1904,8 @@
       case 'quest-claim': if (S.quest && !S.quest.claimed) { S.quest.claimed = true; S.gems += 10; persist(); renderTop(); go('learn'); toast('🎯 +10 💎'); } break;
       case 'buy-freeze': if (S.gems >= 30) { S.gems -= 30; S.freeze = (S.freeze || 0) + 1; persist(); renderTop(); renderProfile(); toast('🧊 Streak freeze bought — auto-saves a missed day'); } else toast('Not enough gems'); break;
       case 'toggle-sound': S.sound = S.sound === false ? true : false; persist(); renderProfile(); if (S.sound) sfx('good'); break;
+      case 'play-cele': showCele(a.cele); break;
+      case 'cele-close': $('#lesson').classList.add('hidden'); go('me'); break;
       case 'reset': if (confirm('Reset all progress?')) { S = fresh(); ST = null; persist(); applyTheme(); renderTop(); go('learn'); } break;
     }
   });

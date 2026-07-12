@@ -119,9 +119,19 @@ Tests: open `/tests.html` — 226 data checks, keep them green.
 - ✅ Per-question live ticks (see Supabase bullet above) — 2-account real test.
 - ✅ 4 storyboards First Flight / Library / Rainy Window / Duel — all triggers
   fired via real gameplay; all four scenes screenshotted.
+- ✅ Friends-tab cleanup (?v=39): real friends (🟢, synced xp_week) now compete on
+  a "🏆 Weekly XP" board with just you; practice bots moved to a separate "🤖
+  Practice bots — no XP" section (no rank, no XP). `bumpLeague()` no longer
+  inflates bot XP (bots don't gain XP; real friends' XP syncs from cloud). Global
+  top-10 kept but relabelled "🌍 Everyone this week (all players)" with a note
+  explaining it's the real cloud server (user thought there were no servers —
+  there are). renderFriends split via `isReal = f => f.live || f.id.length>20`.
+- ✅ Animations gallery: Me tab → "🎬 Celebrations" replays any of the 14 variants
+  on demand (CELE_GALLERY + showCele + play-cele/cele-close actions). All 14
+  play; storyboards also still fire automatically on their triggers.
 - Testing note: the in-app browser cached index.html via the SW; had to
-  unregister SW + clear caches to see ?v=38. Production SW is network-first so
-  real users DO get updates, but ALWAYS bump ?v= (done: 37→38).
+  unregister SW + clear caches to see new ?v=. Production SW is network-first so
+  real users DO get updates, but ALWAYS bump ?v= (now at 39).
 
 ## NEXT BUILD SPEC — competitive race upgrade (user asked 2026-07-12)
 User wants races to feel like a face-to-face duel, not just 5 Qs:
