@@ -1105,17 +1105,27 @@
       </g>
     </g>
   </svg>`;
-  // Celebration crow: the user's animated Lottie crow (vendored offline in
-  // lottie/), with emoji fallback if the player didn't load.
-  let CROW_ANIM = null;   // preloaded so the crow can never fail to appear
-  fetch('lottie/crow.json').then(r => r.json()).then(j => { CROW_ANIM = j; }).catch(() => {});
-  const crow = cls => `<span class="crow lottie ${cls || ''}"><div class="lbox"></div></span>`;
-  function mountCrows() {
-    document.querySelectorAll('.crow .lbox:not(.mounted)').forEach(box => {
+  // Celebration crow — hand-drawn, front-facing, feet on the ground so it levels
+  // with the emoji mascot (was a Lottie crow that floated above the animal).
+  const DANCE_CROW_SVG = `<svg viewBox="0 0 100 122" class="dcsvg" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="#e0a52f" stroke-width="3.4" stroke-linecap="round" fill="none">
+      <path d="M43 96 L41 113"/><path d="M41 113 l-6 5 M41 113 l0 6 M41 113 l6 5"/>
+      <path d="M57 96 L59 113"/><path d="M59 113 l-6 5 M59 113 l0 6 M59 113 l6 5"/>
+    </g>
+    <ellipse cx="50" cy="70" rx="30" ry="32" fill="#141a20"/>
+    <ellipse cx="43" cy="64" rx="13" ry="16" fill="#26384a" opacity=".38"/>
+    <path class="dc-wingL" d="M23 58 C11 64 9 82 18 92 C26 86 31 72 33 62 Z" fill="#0d1319"/>
+    <path class="dc-wingR" d="M77 58 C89 64 91 82 82 92 C74 86 69 72 67 62 Z" fill="#0d1319"/>
+    <circle cx="50" cy="33" r="22" fill="#141a20"/>
+    <path d="M43 13 C45 5 52 4 56 8 C51 12 49 18 49 23 Z" fill="#0d1319"/>
+    <circle cx="42" cy="30" r="5.4" fill="#fff"/><circle cx="43" cy="31" r="2.7" fill="#20303e"/>
+    <circle cx="58" cy="30" r="5.4" fill="#fff"/><circle cx="57" cy="31" r="2.7" fill="#20303e"/>
+    <path d="M45 39 L55 39 L50 48 Z" fill="#f4c542"/>
+  </svg>`;
+  const crow = cls => `<span class="crow svgc ${cls || ''}">${DANCE_CROW_SVG}</span>`;
+  function mountCrows() {   // kept as a no-op guard; the SVG crow needs no mounting
+    document.querySelectorAll('.crow.lottie .lbox:not(.mounted)').forEach(box => {
       box.classList.add('mounted');
-      if (window.lottie && CROW_ANIM) {
-        try { lottie.loadAnimation({ container: box, renderer: 'svg', loop: true, autoplay: true, animationData: CROW_ANIM }); return; } catch {}
-      }
       const p = box.parentElement; p.classList.remove('lottie'); p.classList.add('emoji'); p.textContent = '🐦‍⬛';
     });
   }
