@@ -801,32 +801,22 @@
   </svg>`;
   // Temple-tap meme: smug crow, one wing feather tapping his head. Can't
   // forget a word you've mastered. (User storyboard.)
-  // The Thinker crow with a monocle — Rodin pose: hunched on a plinth, chin on fist.
+  // The Thinker — just a distinguished crow HEAD with a monocle + thought bubbles.
   const TAP_SVG = `<svg viewBox="0 0 200 175" class="thsvg" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="100" cy="164" rx="56" ry="8" fill="#000" opacity=".12"/>
-    <path d="M48 156 C44 138 62 131 82 133 L120 133 C142 131 156 141 152 156 Z" fill="#9aa0a6"/>
-    <rect x="48" y="153" width="104" height="9" rx="4.5" fill="#7c8288"/>
-    <g class="th-fig">
-      <ellipse cx="90" cy="124" rx="35" ry="23" fill="#141a20"/>
-      <ellipse cx="126" cy="120" rx="17" ry="13" fill="#10161c"/>
-      <path d="M120 130 l19 0 l3 8 l-25 0 Z" fill="#f4c542"/>
-      <path d="M62 140 l17 0 l3 7 l-23 0 Z" fill="#e0b23a"/>
-      <path d="M72 122 C63 98 76 74 100 70 C114 68 124 76 126 88 C121 98 117 108 117 118 C103 121 86 122 72 122 Z" fill="#141a20"/>
-      <g class="th-head">
-        <circle cx="104" cy="70" r="25" fill="#141a20"/>
-        <path d="M90 86 L80 104 L100 95 Z" fill="#f4c542"/>
-        <path d="M99 52 C106 47 117 48 122 54" stroke="#0a0f14" stroke-width="3.6" stroke-linecap="round" fill="none"/>
-        <circle cx="113" cy="65" r="4.4" fill="#fff"/><circle cx="114" cy="66" r="2.2" fill="#222"/>
-        <circle class="th-mono" cx="113" cy="65" r="9" fill="none" stroke="#e8b13a" stroke-width="2"/>
-        <path d="M115 74 C118 84 115 92 107 97" stroke="#e8b13a" stroke-width="1.5" fill="none"/>
-      </g>
-      <g class="th-arm">
-        <path d="M126 120 C122 107 113 99 104 97 C99 99 97 104 100 108 C109 110 117 114 121 122 Z" fill="#0d1319"/>
-        <ellipse cx="102" cy="98" rx="8.5" ry="7.5" fill="#12181f"/>
-      </g>
-    </g>
     <g class="th-think" fill="#9aa0a6">
-      <circle class="th-d d1" cx="140" cy="54" r="2.4"/><circle class="th-d d2" cx="151" cy="42" r="3"/><circle class="th-d d3" cx="164" cy="28" r="3.8"/>
+      <circle class="th-d d1" cx="150" cy="58" r="3"/><circle class="th-d d2" cx="163" cy="44" r="3.7"/><circle class="th-d d3" cx="177" cy="28" r="4.5"/>
+    </g>
+    <g class="th-head">
+      <path d="M64 46 C68 30 80 26 88 31 C84 41 83 52 85 60 Z" fill="#0d1319"/>
+      <path d="M120 44 C116 28 104 24 96 29 C100 39 101 50 99 58 Z" fill="#0d1319"/>
+      <circle cx="96" cy="98" r="55" fill="#141a20"/>
+      <ellipse cx="78" cy="80" rx="23" ry="17" fill="#26384a" opacity=".32"/>
+      <path d="M138 100 L173 109 L140 121 Z" fill="#f4c542"/>
+      <path d="M138 109 L166 112 L140 117 Z" fill="#d9a521"/>
+      <path d="M72 70 C86 60 105 60 119 68" stroke="#0a0f14" stroke-width="5" stroke-linecap="round" fill="none"/>
+      <circle cx="112" cy="90" r="8" fill="#fff"/><circle cx="114" cy="91" r="4" fill="#222"/>
+      <circle class="th-mono" cx="112" cy="90" r="16" fill="none" stroke="#e8b13a" stroke-width="3.5"/>
+      <path d="M118 106 C122 124 113 136 99 141" stroke="#e8b13a" stroke-width="2.2" fill="none"/>
     </g>
   </svg>`;
   // Moonwalk crow: fedora + white glove, gliding backward, spin, toe-stand.
@@ -1223,7 +1213,7 @@
       <div class="band"><span class="realm">${r.icon} ${r.name}</span>
         <button class="spk" data-action="speak" data-text="${esc(t.term)}">🔊</button></div>
       <div class="face"><div class="emoji">${t.emoji}</div>
-        <div class="word">${esc(t.term)}</div><div class="py">${esc(t.reading || '')}</div></div>
+        <div class="word" style="font-size:${glyphSize(t.term, 30, 130)}px">${esc(t.term)}</div><div class="py">${esc(t.reading || '')}</div></div>
       <div class="mean">${esc(tm(t.en))}</div>
       <div class="dots">${dots}</div>
       ${owned ? '' : '<div class="lockicon">🔒</div>'}`;
@@ -1279,12 +1269,12 @@
   const seg = (key, val, label) => `<button data-action="study-set" data-key="${key}" data-val="${val}" class="${(key === 'deck' ? S.studyDeck : key === 'front' ? safeFront() : S.studyMode) === val ? 'on' : ''}">${label}</button>`;
   // Shrink big card text so long words (Zulu "sawubona", German, etc.) stay inside
   // the ~250px card instead of spilling out the sides. CJK glyphs are ~full-width.
-  function glyphSize(text, base) {
+  function glyphSize(text, base, maxW) {
     const s = String(text || '').trim();
     const cjk = /[぀-ヿ㐀-鿿가-힯豈-﫿]/.test(s);
     let units = 0;                              // estimated width of the WHOLE term, in font-size units
     for (const ch of s) { const c = ch.charCodeAt(0), wide = (c >= 0x3040 && c <= 0x9fff) || (c >= 0xac00 && c <= 0xd7af) || (c >= 0xf900 && c <= 0xfaff); units += /\s/.test(ch) ? 0.34 : wide ? 1.0 : 0.70; }
-    const fit = 248 / Math.max(units, 0.70);    // largest size that keeps the whole term on one line (fits the ~256px card)
+    const fit = (maxW || 248) / Math.max(units, 0.70);    // largest size that keeps the whole term on one line
     return Math.max(18, Math.min(base, Math.round(fit)));
   }
   function frontFace(t, front) {

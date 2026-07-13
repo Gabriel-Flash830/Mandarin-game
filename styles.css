@@ -176,9 +176,10 @@ button { font-family: inherit; cursor: pointer; }
   background:rgba(20,20,20,.7); color:#fff; font-size:12px; }
 .glyph .face { margin-top:-26px; text-align:center; }
 .glyph .emoji { font-size:38px; filter:drop-shadow(0 3px 4px rgba(0,0,0,.12)); }
-.glyph .word { font-size:30px; font-weight:900; margin-top:2px; line-height:1; }
+.glyph .word { font-size:30px; font-weight:900; margin-top:2px; line-height:1.05; padding:0 6px; max-width:100%; overflow-wrap:anywhere; word-break:break-word; }
 .glyph .py { font-size:12px; color:var(--muted); font-weight:700; }
-.glyph .mean { font-size:14px; font-weight:800; padding:4px 8px 6px; text-align:center; color:#3a4a52; }
+.glyph .mean { font-size:14px; font-weight:800; padding:4px 8px 6px; text-align:center; color:#3a4a52; overflow-wrap:anywhere; }
+.glyph .py { overflow-wrap:anywhere; }
 .glyph .dots { text-align:center; padding-bottom:8px; color:var(--gold-d); font-size:11px; letter-spacing:2px; }
 .glyph.legendary { box-shadow:0 8px 22px rgba(246,196,69,.4); border-color:var(--gold); }
 .glyph.foil::after { content:""; position:absolute; inset:0; pointer-events:none;
@@ -553,7 +554,7 @@ button { font-family: inherit; cursor: pointer; }
 @keyframes thPop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .th-fig { transform-origin: 50% 100%; animation: thBreathe 3.6s ease-in-out infinite alternate; }
 @keyframes thBreathe { from { transform: translateY(0); } to { transform: translateY(-1.6px); } }
-.th-head { transform-origin: 62% 92%; animation: thPonder 5s ease-in-out infinite; }
+.th-head { transform-origin: 50% 96%; animation: thPonder 5s ease-in-out infinite; }
 @keyframes thPonder { 0%,58%,100% { transform: rotate(0deg); } 30% { transform: rotate(-4deg); } }
 .th-mono { animation: thGlint 3.2s ease-in-out infinite; }
 @keyframes thGlint { 0%,82%,100% { stroke: #e8b13a; } 90% { stroke: #fff3cf; } }
