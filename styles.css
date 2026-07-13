@@ -396,6 +396,8 @@ button { font-family: inherit; cursor: pointer; }
 .subnav { display:flex; gap:6px; padding:6px 16px 10px; }
 .subnav button { flex:1; border:1px solid var(--line); background:#fff; border-radius:12px; padding:9px 4px; font-weight:800; font-size:13px; color:var(--muted); }
 .subnav button.on { background:var(--jade); color:#fff; border-color:transparent; }
+.qrace { display:flex; gap:8px; margin-top:6px; }
+.qrace button { flex:1; }
 
 /* friends */
 .frow { display:flex; align-items:center; gap:12px; padding:11px 12px; border-bottom:1px solid var(--line); }

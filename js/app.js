@@ -1314,15 +1314,28 @@
   function rivalUnlocked(i) { return i === 0 || beatenSet()[course().rivals[i - 1].id]; }
   function renderArena() {
     const root = $('#scr-battle'); root.innerHTML = '';
-    root.appendChild(el('div', 'section-head', `<h1>${tr('arena_title')}</h1><p>${tl('Battle rivals, add friends, and run a tournament.')}</p>`));
+    root.appendChild(el('div', 'section-head', `<h1>${tr('arena_title')}</h1><p>${tl('Battle rivals, race friends, top the boards.')}</p>`));
     const nav = el('div', 'subnav');
-    [['rivals', '⚔️ ' + tl('Rivals')], ['friends', '👥 ' + tl('Friends')], ['tourney', '🏆 ' + tl('Tournament')]].forEach(([id, label]) => {
+    [['rivals', '⚔️ ' + tl('Rivals')], ['friends', '👥 ' + tl('Friends')], ['practice', '🤖 ' + tl('Practice')], ['leaders', '🏆 ' + tl('Ranks')]].forEach(([id, label]) => {
       nav.innerHTML += `<button data-action="arena-tab" data-id="${id}" class="${arenaTab === id ? 'on' : ''}">${label}</button>`;
     });
     root.appendChild(nav);
     if (arenaTab === 'rivals') renderRivals(root);
     else if (arenaTab === 'friends') renderFriends(root);
-    else renderTourney(root);
+    else if (arenaTab === 'practice') renderPractice(root);
+    else renderLeaderboards(root);
+  }
+  // pull real friends' latest name + weekly XP from the cloud, then re-render
+  function syncCloudFriends(cb) {
+    const cloudIds = (S.friends || []).filter(f => (f.id || '').length > 20).map(f => f.id);
+    if (!sbUid() || !cloudIds.length) return;
+    fetch(SB_URL + '/rest/v1/profiles?select=id,name,xp_week&id=in.(' + cloudIds.join(',') + ')', { headers: sbH(CLOUD.session.access_token) })
+      .then(r => r.ok ? r.json() : []).then(rows => {
+        let changed = false;
+        rows.forEach(p => { const f = S.friends.find(x => x.id === p.id);
+          if (f && (f.name !== p.name || f.xp !== p.xp_week)) { f.name = p.name; f.xp = p.xp_week; f.live = true; changed = true; } });
+        if (changed) { persist(); if (cb) cb(); }
+      }).catch(() => {});
   }
   function renderRivals(root) {
     const list = el('div', 'rival-list');
@@ -1345,13 +1358,8 @@
     if (!S.displayName) setTimeout(() => toast('👤 Set your name (Edit name) so friends can tell it’s you!'), 600);
     const myCode = enc({ ww: 'friend', n: name, id: sbUid() || S.myId });
     const wrap = el('div', 'pad');
-    // Real friends (🟢 cloud, synced XP) compete on the weekly board; bots are practice only.
     const isReal = f => !!(f.live || (f.id || '').length > 20);
     const realFriends = (S.friends || []).filter(isReal);
-    const bots = (S.friends || []).filter(f => !isReal(f));
-    const league = [{ name, av: '😀', xp: S.xpWeek, me: true }, ...realFriends].sort((a, b) => b.xp - a.xp);
-    const dLabel = sk => sk < 0.42 ? 'Easy' : sk < 0.58 ? 'Medium' : 'Hard';
-    const dCls = sk => sk < 0.42 ? 'easy' : sk < 0.58 ? 'med' : 'hard';
     wrap.innerHTML = `<div id="fr-inbox"></div><div class="settings-card" style="margin-bottom:14px">
         <div class="seg-label">👤 Your account</div>
         <p class="note" style="margin:4px 0 8px">Name: <b>${esc(name)}</b> — share your friend code so people can add you.</p>
@@ -1362,69 +1370,85 @@
           <button class="btn sm ghost" data-action="add-by-code">＋ Add by code</button>
         </div>
       </div>
-      <div class="seg-label">🏆 Weekly XP — you &amp; your friends</div>
-      ${realFriends.length ? '' : `<p class="note" style="margin:4px 0 10px">Just you so far. Swap friend codes with a real friend (＋ Add by code) — only real friends 🟢 race for weekly XP here. Practice bots don't count and live below.</p>`}` +
-      league.map((r, i) => `<div class="frow ${r.me ? 'me' : ''}"><div class="fpos">${i + 1}</div><div class="fav">${r.av}</div>
-        <div class="fnm">${esc(r.name)}${r.live ? ' 🟢' : ''}</div><div class="fxp">${r.xp} XP</div>
-        ${r.me ? '' : `<button class="btn sm" data-action="challenge-friend" data-id="${r.id}" style="padding:6px 10px;margin-right:4px">⚔️</button><button class="frm" data-action="remove-friend" data-id="${r.id}">✕</button>`}</div>`).join('') +
-      `<div class="seg-label" style="margin-top:18px">🤖 Practice bots — for fun, no XP</div>` +
-      (bots.length ? bots.map(b => `<div class="frow"><div class="fav">${b.av}</div>
-        <div class="fnm">${esc(b.name)} <span class="diff ${dCls(b.skill || 0.45)}" style="margin-left:6px">${dLabel(b.skill || 0.45)}</span></div>
-        <button class="btn sm" data-action="challenge-friend" data-id="${b.id}" style="padding:6px 10px;margin-right:4px">⚔️</button><button class="frm" data-action="remove-friend" data-id="${b.id}">✕</button></div>`).join('') : '') +
-      `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-         <button class="btn sm sky" data-action="add-friend">＋ Add a practice bot</button>
-         <button class="btn sm ghost" data-action="bot-race" data-skill="0.25">Quick race · Easy</button>
-         <button class="btn sm ghost" data-action="bot-race" data-skill="0.45">Medium</button>
-         <button class="btn sm ghost" data-action="bot-race" data-skill="0.7">Hard</button></div>
-       <div class="seg-label" style="margin-top:18px">🌐 Play a real person</div>
-       <div style="display:flex;gap:8px;margin-top:6px">
-         <button class="btn" data-action="create-challenge">Send a challenge</button>
-         <button class="btn ghost" data-action="join-challenge">Have a code?</button>
-       </div>
-       <button class="seg-label" data-action="toggle-lb" style="margin-top:18px;background:none;border:none;cursor:pointer;padding:0;display:block">🌍 Global top 10 · everyone this week ${window.__lbOpen ? '▾' : '▸'}</button>
-       ${window.__lbOpen ? `<div id="cloud-lb" class="lb-list">${sbUid() ? '…' : tl('Cloud off — see Me tab')}</div>
-       <p class="note">🏆 above is you + your friends. This is the global top 10 across everyone on WordWisp (a real cloud server) — tap the header to collapse.</p>` : ''}`;
+      <div class="seg-label">🟢 Your friends</div>
+      ${realFriends.length ? realFriends.map(f => `<div class="frow"><div class="fav">${f.av}</div>
+        <div class="fnm">${esc(f.name)} 🟢</div>
+        <button class="btn sm" data-action="challenge-friend" data-id="${f.id}" style="padding:6px 10px;margin-right:4px">⚔️ Race</button>
+        <button class="frm" data-action="remove-friend" data-id="${f.id}">✕</button></div>`).join('')
+        : `<p class="note" style="margin:4px 0 10px">No friends yet. Tap <b>＋ Add by code</b> above and swap codes with a real friend to race. (Practice bots live on the 🤖 Practice tab; rankings on 🏆 Ranks.)</p>`}
+      <div class="seg-label" style="margin-top:18px">🌐 Play across devices (a code)</div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="btn" data-action="create-challenge">Send a challenge</button>
+        <button class="btn ghost" data-action="join-challenge">Have a code?</button>
+      </div>
+      <div class="seg-label" style="margin-top:18px">🏅 Friends tournament</div>
+      <div id="fr-tourney"></div>`;
     root.appendChild(wrap);
-    const cloudIds = (S.friends || []).filter(f => (f.id || '').length > 20).map(f => f.id);
-    if (sbUid() && cloudIds.length) {
-      fetch(SB_URL + '/rest/v1/profiles?select=id,name,xp_week&id=in.(' + cloudIds.join(',') + ')', { headers: sbH(CLOUD.session.access_token) })
-        .then(r => r.ok ? r.json() : []).then(rows => {
-          let changed = false;
-          rows.forEach(p => { const f = S.friends.find(x => x.id === p.id);
-            if (f && (f.name !== p.name || f.xp !== p.xp_week)) { f.name = p.name; f.xp = p.xp_week; f.live = true; changed = true; } });
-          if (changed) { persist(); if (arenaTab === 'friends') renderArena(); }
-        }).catch(() => {});
-    }
+    renderTourneyInto($('#fr-tourney'));
+    syncCloudFriends(() => { if (arenaTab === 'friends') renderArena(); });
     loadInbox();
     clearInterval(window.__inboxIv);
     window.__inboxIv = setInterval(() => {
       if (arenaTab === 'friends' && document.querySelector('#fr-inbox')) loadInbox();
       else clearInterval(window.__inboxIv);
     }, 5000);
-    if (sbUid() && window.__lbOpen) sbLeaderboard().then(rows => { const d = $('#cloud-lb'); if (d) d.innerHTML = rows.length
+  }
+  function renderPractice(root) {
+    ensureFriends();
+    const isReal = f => !!(f.live || (f.id || '').length > 20);
+    const bots = (S.friends || []).filter(f => !isReal(f));
+    const dLabel = sk => sk < 0.42 ? 'Easy' : sk < 0.58 ? 'Medium' : 'Hard';
+    const dCls = sk => sk < 0.42 ? 'easy' : sk < 0.58 ? 'med' : 'hard';
+    const wrap = el('div', 'pad');
+    wrap.innerHTML = `<p class="note" style="margin:2px 0 12px">Warm-up races against bots — these don't earn XP or affect your ranking.</p>
+      <div class="seg-label">⚡ Quick race</div>
+      <div class="qrace"><button class="btn sm ghost" data-action="bot-race" data-skill="0.25">Easy</button>
+        <button class="btn sm ghost" data-action="bot-race" data-skill="0.45">Medium</button>
+        <button class="btn sm ghost" data-action="bot-race" data-skill="0.7">Hard</button></div>
+      <div class="seg-label" style="margin-top:18px">🤖 Your practice bots</div>
+      ${bots.length ? bots.map(b => `<div class="frow"><div class="fav">${b.av}</div>
+        <div class="fnm">${esc(b.name)} <span class="diff ${dCls(b.skill || 0.45)}" style="margin-left:6px">${dLabel(b.skill || 0.45)}</span></div>
+        <button class="btn sm" data-action="challenge-friend" data-id="${b.id}" style="padding:6px 10px;margin-right:4px">⚔️ Race</button>
+        <button class="frm" data-action="remove-friend" data-id="${b.id}">✕</button></div>`).join('') : '<p class="note">No bots yet — add one below.</p>'}
+      <button class="btn sky mt" data-action="add-friend">＋ Add a practice bot</button>`;
+    root.appendChild(wrap);
+  }
+  function renderLeaderboards(root) {
+    ensureFriends();
+    const name = S.displayName || 'You';
+    const isReal = f => !!(f.live || (f.id || '').length > 20);
+    const realFriends = (S.friends || []).filter(isReal);
+    const league = [{ name, av: '😀', xp: S.xpWeek, me: true }, ...realFriends].sort((a, b) => b.xp - a.xp);
+    const wrap = el('div', 'pad');
+    wrap.innerHTML = `<div class="seg-label">🏆 Weekly XP — you &amp; friends</div>
+      ${league.map((r, i) => `<div class="frow ${r.me ? 'me' : ''}"><div class="fpos">${i + 1}</div><div class="fav">${r.av}</div>
+        <div class="fnm">${esc(r.name)}${r.live ? ' 🟢' : ''}</div><div class="fxp">${r.xp} XP</div></div>`).join('')}
+      ${realFriends.length ? '' : `<p class="note" style="margin:6px 0">Add friends on the 👥 Friends tab to race for weekly XP together.</p>`}
+      <div class="seg-label" style="margin-top:20px">🌍 Global top 10 · everyone this week</div>
+      <div id="cloud-lb" class="lb-list"><p class="note">${sbUid() ? '…' : tl('Cloud off — see Me tab')}</p></div>`;
+    root.appendChild(wrap);
+    syncCloudFriends(() => { if (arenaTab === 'leaders') renderArena(); });
+    if (sbUid()) sbLeaderboard().then(rows => { const d = $('#cloud-lb'); if (d) d.innerHTML = rows.length
       ? rows.map((r, i) => `<div class="lb-row"><span class="lb-rank">${['🥇', '🥈', '🥉'][i] || (i + 1)}</span><span class="lb-name">${esc(r.name)}</span><span class="lb-xp">${r.xp_week} XP</span></div>`).join('')
       : '<p class="note">No players yet — you’ll appear here after your next lesson.</p>'; });
   }
-  function renderTourney(root) {
-    const wrap = el('div', 'pad'); const t = S.tourney;
+  function renderTourneyInto(container) {
+    if (!container) return;
+    const t = S.tourney;
     if (!t) {
-      wrap.innerHTML = `<div class="empty" style="padding:24px 8px">🏆<br><b>Weekend Cup</b><br><span class="note">A 4-player knockout with your friend group.</span></div>
+      container.innerHTML = `<div class="empty" style="padding:16px 8px">🏅<br><b>Weekend Cup</b><br><span class="note">A 4-player knockout with your friend group.</span></div>
         <button class="btn" data-action="start-tourney">Start tournament</button>`;
-    } else {
-      const name = p => p.me ? 'You' : p.name;
-      const semiResult = t.stage === 'semi' ? 'vs you — your match' : (t.youWonSemi ? 'You won ✓' : 'You lost');
-      wrap.innerHTML = `<div class="seg-label">Weekend Cup · bracket</div>
-        <div class="bracket">
-          <div class="match"><div class="bp">😀 You</div><div class="bp">${t.oppA.av} ${esc(t.oppA.name)}</div><div class="blabel">Semifinal</div></div>
-          <div class="match"><div class="bp">${t.semiBav} ${esc(t.semiB.a)}</div><div class="bp">${t.semiCav} ${esc(t.semiB.b)}</div><div class="blabel">Semifinal → ${t.finalist.av} ${esc(t.finalist.name)}</div></div>
-          <div class="match final"><div class="bp">${t.stage === 'done' ? (t.champ.me ? '😀 You' : t.champ.av + ' ' + esc(t.champ.name)) : '🏆 Final'}</div><div class="blabel">${t.stage === 'done' ? 'Champion' : 'Final'}</div></div>
-        </div>
-        ${t.stage === 'done'
-          ? `<div class="center" style="font-weight:800;margin:14px 0">${t.champ.me ? '🎉 You won the Cup! +40 💎' : `${t.champ.av} ${esc(t.champ.name)} took the Cup.`}</div>
-             <button class="btn ghost" data-action="reset-tourney">New tournament</button>`
-          : `<button class="btn" data-action="tourney-play">Play your ${t.stage === 'final' ? 'final' : 'semifinal'} →</button>`}`;
+      return;
     }
-    root.appendChild(wrap);
+    container.innerHTML = `<div class="bracket">
+        <div class="match"><div class="bp">😀 You</div><div class="bp">${t.oppA.av} ${esc(t.oppA.name)}</div><div class="blabel">Semifinal</div></div>
+        <div class="match"><div class="bp">${t.semiBav} ${esc(t.semiB.a)}</div><div class="bp">${t.semiCav} ${esc(t.semiB.b)}</div><div class="blabel">Semifinal → ${t.finalist.av} ${esc(t.finalist.name)}</div></div>
+        <div class="match final"><div class="bp">${t.stage === 'done' ? (t.champ.me ? '😀 You' : t.champ.av + ' ' + esc(t.champ.name)) : '🏆 Final'}</div><div class="blabel">${t.stage === 'done' ? 'Champion' : 'Final'}</div></div>
+      </div>
+      ${t.stage === 'done'
+        ? `<div class="center" style="font-weight:800;margin:14px 0">${t.champ.me ? '🎉 You won the Cup! +40 💎' : `${t.champ.av} ${esc(t.champ.name)} took the Cup.`}</div>
+           <button class="btn ghost" data-action="reset-tourney">New tournament</button>`
+        : `<button class="btn" data-action="tourney-play">Play your ${t.stage === 'final' ? 'final' : 'semifinal'} →</button>`}`;
   }
 
   /* ---------------- BATTLE (turn-based, rival fights back) ---------------- */
@@ -1772,7 +1796,7 @@
     const oppA = pool[0], b = pool[1], c = pool[2];
     const finalist = Math.random() < 0.5 ? b : c;
     S.tourney = { oppA, finalist, semiB: { a: b.name, b: c.name }, semiBav: b.av, semiCav: c.av, stage: 'semi', youWonSemi: false, champ: null };
-    persist(); arenaTab = 'tourney'; renderArena();
+    persist(); arenaTab = 'friends'; renderArena();
   }
   function tourneyPlay() {
     const t = S.tourney; const opp = t.stage === 'final' ? t.finalist : t.oppA;
@@ -1786,7 +1810,7 @@
         if (won) { t.champ = { name: 'You', av: '😀', me: true }; S.gems += 40; S.xp += 40; S.xpWeek += 40; bumpLeague(); }
         else t.champ = { ...t.finalist };
       }
-      persist(); renderTop(); arenaTab = 'tourney'; go('battle');
+      persist(); renderTop(); arenaTab = 'friends'; go('battle');
     });
   }
 
