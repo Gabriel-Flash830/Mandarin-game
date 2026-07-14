@@ -1445,20 +1445,44 @@
   function renderTourneyInto(container) {
     if (!container) return;
     const t = S.tourney;
-    if (!t) {
-      container.innerHTML = `<div class="empty" style="padding:16px 8px">🏅<br><b>Weekend Cup</b><br><span class="note">A 4-player knockout with your friend group.</span></div>
-        <button class="btn" data-action="start-tourney">Start tournament</button>`;
+    if (t && t.stage === 'playing') {
+      const left = Math.max(2, Math.round(t.size / Math.pow(2, t.round - 1)));
+      container.innerHTML = `<div class="settings-card">
+        <div class="seg-label">${t.mode === 'friends' ? '🟢 Friends' : '🤖 Open'} Cup · Round ${t.round} of ${t.totalRounds}</div>
+        <p class="note" style="margin:4px 0 8px">${left} players left. Your match: <b>😀 You</b> vs <b>${t.opp.av} ${esc(t.opp.name)}</b>. Win to advance.</p>
+        <button class="btn" data-action="tourney-play">Play round ${t.round} →</button>
+        <button class="btn sm flat mt" data-action="reset-tourney">Quit tournament</button></div>`;
       return;
     }
-    container.innerHTML = `<div class="bracket">
-        <div class="match"><div class="bp">😀 You</div><div class="bp">${t.oppA.av} ${esc(t.oppA.name)}</div><div class="blabel">Semifinal</div></div>
-        <div class="match"><div class="bp">${t.semiBav} ${esc(t.semiB.a)}</div><div class="bp">${t.semiCav} ${esc(t.semiB.b)}</div><div class="blabel">Semifinal → ${t.finalist.av} ${esc(t.finalist.name)}</div></div>
-        <div class="match final"><div class="bp">${t.stage === 'done' ? (t.champ.me ? '😀 You' : t.champ.av + ' ' + esc(t.champ.name)) : '🏆 Final'}</div><div class="blabel">${t.stage === 'done' ? 'Champion' : 'Final'}</div></div>
+    if (t && t.stage === 'done') {
+      container.innerHTML = `<div class="settings-card"><div class="center" style="font-weight:800;margin:6px 0">${t.champ.me
+        ? '🏆 You won the ' + (t.mode === 'friends' ? 'Friends' : 'Open') + ' Cup! +40 💎'
+        : t.champ.av + ' ' + esc(t.champ.name) + ' took the Cup — get them next time.'}</div>
+        <button class="btn ghost" data-action="reset-tourney">New tournament</button></div>`;
+      return;
+    }
+    // setup
+    const size = window.__tSize || 8;
+    const isReal = f => !!(f.live || (f.id || '').length > 20);
+    const realCount = (S.friends || []).filter(isReal).length;
+    const need = size - 1 - realCount;
+    const sizeBtns = [4, 6, 8, 16].map(n => `<button class="btn sm ${n === size ? '' : 'ghost'}" data-action="tourney-size" data-n="${n}" style="flex:1;padding:9px 4px">${n}</button>`).join('');
+    container.innerHTML = `
+      <div class="seg-label" style="margin-top:2px">Bracket size</div>
+      <div style="display:flex;gap:8px;margin:6px 0 14px">${sizeBtns}</div>
+      <div class="settings-card" style="margin-bottom:10px">
+        <div class="seg-label">🤖 Open Cup</div>
+        <p class="note" style="margin:4px 0 8px">A ${size}-player knockout, filled out with bots.</p>
+        <button class="btn sm" data-action="start-tourney" data-mode="open" data-bots="0">Start Open Cup</button>
       </div>
-      ${t.stage === 'done'
-        ? `<div class="center" style="font-weight:800;margin:14px 0">${t.champ.me ? '🎉 You won the Cup! +40 💎' : `${t.champ.av} ${esc(t.champ.name)} took the Cup.`}</div>
-           <button class="btn ghost" data-action="reset-tourney">New tournament</button>`
-        : `<button class="btn" data-action="tourney-play">Play your ${t.stage === 'final' ? 'final' : 'semifinal'} →</button>`}`;
+      <div class="settings-card">
+        <div class="seg-label">🟢 Friends Cup — real friends only</div>
+        ${need <= 0
+          ? `<p class="note" style="margin:4px 0 8px">You + ${size - 1} of your ${realCount} real friend${realCount === 1 ? '' : 's'}. No bots.</p>
+             <button class="btn sm" data-action="start-tourney" data-mode="friends" data-bots="0">Start Friends Cup</button>`
+          : `<p class="note" style="margin:4px 0 8px">You have <b>${realCount}</b> real friend${realCount === 1 ? '' : 's'} — a ${size}-player cup needs ${size - 1}. Add more friends (👥 Friends tab), pick a smaller size, or fill the last <b>${need}</b> ${need === 1 ? 'slot' : 'slots'} with bots.</p>
+             <button class="btn sm" data-action="start-tourney" data-mode="friends" data-bots="${need}">＋ Fill ${need} with bots &amp; start</button>`}
+      </div>`;
   }
 
   /* ---------------- BATTLE (turn-based, rival fights back) ---------------- */
@@ -1799,27 +1823,32 @@
     persist(); renderArena(); toast('Friend added');
   }
   function removeFriend(id) { S.friends = (S.friends || []).filter(f => f.id !== id); persist(); renderArena(); }
-  const randBot = () => ({ id: 'b' + rand(1, 9999), name: sample(BOT_NAMES, 1)[0], av: sample(BOT_AV, 1)[0], xp: rand(20, 160) });
-  function startTourney() {
+  const randTourBot = () => ({ name: sample(BOT_NAMES, 1)[0], av: sample(BOT_AV, 1)[0], skill: rand(35, 60) / 100 });
+  // Configurable knockout: size 4/6/8/16, mode 'open' (bots) or 'friends' (real
+  // friends only; bots added only if you explicitly choose to fill). You run a
+  // gauntlet — win ceil(log2 size) rounds to take the cup.
+  function startTourney(size, mode, extraBots) {
     ensureFriends();
-    const pool = shuffle([...S.friends.map(f => ({ ...f })), randBot(), randBot(), randBot()]);
-    const oppA = pool[0], b = pool[1], c = pool[2];
-    const finalist = Math.random() < 0.5 ? b : c;
-    S.tourney = { oppA, finalist, semiB: { a: b.name, b: c.name }, semiBav: b.av, semiCav: c.av, stage: 'semi', youWonSemi: false, champ: null };
+    const isReal = f => !!(f.live || (f.id || '').length > 20);
+    let pool;
+    if (mode === 'friends') {
+      pool = (S.friends || []).filter(isReal).map(f => ({ name: f.name, av: f.av, skill: 0.45 })).slice(0, size - 1);
+      for (let i = 0; i < (extraBots || 0) && pool.length < size - 1; i++) pool.push(randTourBot());
+    } else {
+      pool = (S.friends || []).filter(f => !isReal(f)).map(f => ({ name: f.name, av: f.av, skill: f.skill || 0.45 })).slice(0, size - 1);
+    }
+    while (pool.length < size - 1) pool.push(randTourBot());   // always fill the bracket
+    pool = shuffle(pool);
+    S.tourney = { size, mode, round: 1, totalRounds: Math.ceil(Math.log2(size)), stage: 'playing', champ: null, pool, opp: { ...pool[0] } };
     persist(); arenaTab = 'friends'; renderArena();
   }
   function tourneyPlay() {
-    const t = S.tourney; const opp = t.stage === 'final' ? t.finalist : t.oppA;
-    quizRace({ name: opp.name, av: opp.av, skill: 0.42 }, won => {
-      if (t.stage === 'semi') {
-        t.youWonSemi = won;
-        if (won) t.stage = 'final';
-        else { t.stage = 'done'; t.champ = { ...t.finalist }; }   // finalist wins the cup
-      } else {
-        t.stage = 'done';
-        if (won) { t.champ = { name: 'You', av: '😀', me: true }; S.gems += 40; S.xp += 40; S.xpWeek += 40; bumpLeague(); }
-        else t.champ = { ...t.finalist };
-      }
+    const t = S.tourney, opp = t.opp;
+    quizRace({ name: opp.name, av: opp.av, skill: Math.min(0.75, 0.38 + t.round * 0.06) }, won => {
+      if (won) {
+        if (t.round >= t.totalRounds) { t.stage = 'done'; t.champ = { name: 'You', av: '😀', me: true }; S.gems += 40; S.xp += 40; S.xpWeek += 40; }
+        else { t.round++; t.opp = { ...(t.pool[t.round - 1] || randTourBot()) }; }
+      } else { t.stage = 'done'; t.champ = { name: opp.name, av: opp.av }; }
       persist(); renderTop(); arenaTab = 'friends'; go('battle');
     });
   }
@@ -2008,7 +2037,8 @@
         if (isCloud && sbUid()) fetch(SB_URL + '/rest/v1/friends', { method: 'POST', headers: sbH(CLOUD.session.access_token), body: JSON.stringify({ a: sbUid(), b: d.id }) }).catch(() => {});
         persist(); renderArena(); toast('Added ' + (d.n || 'friend') + (isCloud ? ' 🟢 (live)' : '')); break; }
       case 'copy-code': { const ta = $('#chalCode'); if (ta) { ta.select(); try { navigator.clipboard.writeText(ta.value); } catch {} document.execCommand && document.execCommand('copy'); toast('Code copied'); } break; }
-      case 'start-tourney': startTourney(); break;
+      case 'tourney-size': window.__tSize = +a.n; renderArena(); break;
+      case 'start-tourney': startTourney(+window.__tSize || 8, a.mode || 'open', +a.bots || 0); break;
       case 'tourney-play': tourneyPlay(); break;
       case 'reset-tourney': S.tourney = null; persist(); renderArena(); break;
       case 'quiz-answer': quizAnswer(+a.idx); break;

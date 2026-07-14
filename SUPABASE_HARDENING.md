@@ -1,45 +1,30 @@
-# Supabase hardening — your 5-minute to-do before going public
+# Supabase — everything to paste (do it all in one sitting)
 
-These are the steps only you can do (they need your Supabase dashboard, which I
-can't reach). Everything else — weekly-XP reset, the name/profanity filter, the
-feedback button, collectible celebrations — is already in the code.
+Your base tables (profiles, friends, matches) are already live. These blocks add
+the hardening + the feedback/cloud-save/timer support. Do them before sharing the
+URL publicly.
 
-## How to open the SQL editor (click-by-click)
-1. Go to **https://supabase.com** and open your **wordwisp** project.
-2. Left sidebar → **SQL Editor**.
-3. Click **+ New query**, paste a block below, click **Run** (bottom right).
-4. Do them one block at a time so you can read each result.
+## How to run (click-by-click)
+1. Go to **https://supabase.com** → open your **wordwisp** project.
+2. Left sidebar → **SQL Editor** → **+ New query**.
+3. Paste **one block** below, click **Run** (bottom-right). Repeat for each block.
 
 ---
 
-## 1. Delete the test / QA accounts (and their matches)
+## Block 1 — delete the test / QA accounts
 ```sql
--- remove matches involving the test accounts first (foreign keys require this order)
 delete from matches
 where host  in (select id from profiles where name in ('TestHost','HostQA','GuestQA','TickHostQA','TickGuestQA'))
    or guest in (select id from profiles where name in ('TestHost','HostQA','GuestQA','TickHostQA','TickGuestQA'));
-
--- then remove the accounts themselves
 delete from profiles where name in ('TestHost','HostQA','GuestQA','TickHostQA','TickGuestQA');
-```
 
-Optional — clear the leftover blank "Learner" devices with 0 XP (harmless; brand-new
-players re-create themselves on next load):
-```sql
 delete from matches
 where host  in (select id from profiles where name = 'Learner' and xp = 0)
    or guest in (select id from profiles where name = 'Learner' and xp = 0);
 delete from profiles where name = 'Learner' and xp = 0;
 ```
 
-Optional — reset everyone's weekly XP so the launch leaderboard starts clean:
-```sql
-update profiles set xp_week = 0;
-```
-
-## 2. Tighten the match security rules
-Right now either player in a match can update the row. This keeps that but blocks a
-non-participant from ever touching it:
+## Block 2 — tighten match security
 ```sql
 drop policy if exists "answer matches" on matches;
 create policy "answer matches" on matches for update
@@ -47,8 +32,10 @@ create policy "answer matches" on matches for update
   with check (auth.uid() = host or auth.uid() = guest);
 ```
 
-## 3. Create the feedback table (turns on the in-app "💬 Send feedback" button)
+## Block 3 — feedback table (fixes the capital-F "Feedback" you made)
 ```sql
+drop table if exists "Feedback";
+drop table if exists feedback;
 create table feedback (
   id uuid primary key default gen_random_uuid(),
   reporter uuid,
@@ -59,20 +46,32 @@ create table feedback (
 );
 alter table feedback enable row level security;
 create policy "anyone can submit feedback" on feedback for insert with check (true);
--- (no select policy on purpose: only you, in the dashboard, can read submissions)
 ```
-Read what people send anytime: **Table Editor → feedback**. Until you run this, the
-button still works — reports queue on the device and send themselves once the table
-exists.
+Read submissions later at **Table Editor → feedback**.
 
-## 4. (LATER — only when we build the speed-tiebreaker) add two time columns
-Don't run this yet. When we build the timer/competitive upgrade, this is all it needs:
+## Block 4 — cloud save table (for the Cloud Save feature)
 ```sql
-alter table matches add column host_ms  int;
-alter table matches add column guest_ms int;
+create table if not exists saves (
+  id uuid primary key references profiles(id) on delete cascade,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+alter table saves enable row level security;
+drop policy if exists "own save read"   on saves;
+drop policy if exists "own save insert" on saves;
+drop policy if exists "own save update" on saves;
+create policy "own save read"   on saves for select using (auth.uid() = id);
+create policy "own save insert" on saves for insert with check (auth.uid() = id);
+create policy "own save update" on saves for update using (auth.uid() = id);
+```
+
+## Block 5 — timer columns (for the race speed-tiebreaker)
+```sql
+alter table matches add column if not exists host_ms  int;
+alter table matches add column if not exists guest_ms int;
 ```
 
 ---
 
-After step 1–3: the app is safe to share publicly. Nothing here changes the app URL
-or requires a redeploy — it's all database-side.
+After Block 1–5 you're fully hardened and ready for feedback, cloud save, and the
+timer. None of this changes the app URL or needs a redeploy — it's all database-side.
